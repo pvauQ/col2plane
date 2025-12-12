@@ -1,0 +1,3 @@
+build cctag with cuda
+be mindfull there is lot of depricated stuff..
+building is slow:(
