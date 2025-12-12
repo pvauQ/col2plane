@@ -5,13 +5,21 @@
 #include <iostream>
 #include "src/three_p_solve.h"
 #include "tag_image_solver.h"
-#include "tag_locations.h"
+#include "locations.h"
 
 
 int main(){
 
     std::filesystem::path path("photodir/malli");
-    readTagsFromImages(path);
+    std::map<std::string, boost::ptr_list<cctag::ICCTag>> image_tags;
+    image_tags = readTagsFromImages(path);
+    std::cout << "total images scanned " << image_tags.size() << "\n";
+    filterImagesWithNoTags(image_tags);
+    std::cout << "images_with_ some tags " << image_tags.size() << "\n";
+    filterReliableTags(image_tags);
+    std::cout << "images_with reliable tags " << image_tags.size() << "\n";
+
+
     // this just for testing
     std::vector<Eigen::Vector3d> world_points;
     std::vector<Eigen::Vector3d> imagePoints;

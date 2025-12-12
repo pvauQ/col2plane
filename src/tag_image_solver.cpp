@@ -3,11 +3,15 @@
 #include "tag_image_solver.h"
 #include <vector>
 #include <iostream>
+#include <assert.h>
 
 
+// this should work for 4 points also?
 std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, std::vector<Eigen::Vector3d> image_points,
                          Eigen::Matrix3d intrincts , Eigen::Vector4d distorion)
 {
+
+    assert( image_points.size() == world_cords.size());
     Eigen::Matrix3d k_a = intrincts;
 
     // cv mailmaan hetkeksi
@@ -31,9 +35,16 @@ std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, 
             static_cast<float>(image_points[i].x()),
             static_cast<float>(image_points[i].y()));
     }
+    int solutions = 0;
     std::vector<cv::Mat> rot_out, trans_out;
-    int solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
+    if ( world_cords.size() == 3){
+        solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
+    }
+    else if (world_cords.size() == 4){
+        solutions = cv::solvePnP(objectPoints, imagePoints,K, dist, rot_out, trans_out);
+    }
     std::cout << "Found "  <<solutions <<  " solutions" << std::endl;
+    
     
     // pois cv maailmasta:
     std::vector<Eigen::Vector3d> rotations_rodri; // this can be deleted
@@ -53,7 +64,5 @@ std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, 
         std::cout << translations[i] <<  quat << "\n" ;
         transforms.push_back(transform(rot_quat[0],translations[0]));
     }
-
-    
     return transforms;
 }

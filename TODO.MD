@@ -2,7 +2,7 @@
 
 start wih colmap model
 1 - [] sort colmap images by lovest error
-2 - [] find ccTags from best images
+n - [x] find cctags from images 
 3 - [] calculate p3p for n best image tag pairs (location of camera)
 4 - [] calculate difrence between colmap image location and one we calulate 
 5 - [] store this is in transforms.txt as S quat trans
