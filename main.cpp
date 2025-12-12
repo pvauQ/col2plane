@@ -6,11 +6,16 @@
 #include "src/three_p_solve.h"
 #include "tag_image_solver.h"
 #include "locations.h"
-
+#include "colmap_stuff.h"
 
 int main(){
 
     std::filesystem::path path("photodir/malli");
+    std::filesystem::path model_path  =path / "model";
+    //colmap osuus
+    getCameraTranforms(model_path);
+
+    // cctag osuus
     std::map<std::string, boost::ptr_list<cctag::ICCTag>> image_tags;
     image_tags = readTagsFromImages(path);
     std::cout << "total images scanned " << image_tags.size() << "\n";
@@ -18,6 +23,8 @@ int main(){
     std::cout << "images_with_ some tags " << image_tags.size() << "\n";
     filterReliableTags(image_tags);
     std::cout << "images_with reliable tags " << image_tags.size() << "\n";
+
+    //matikka osuus..
 
 
     // this just for testing

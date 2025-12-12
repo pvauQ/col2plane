@@ -3,11 +3,16 @@
 #include <opencv4/opencv2/opencv.hpp>
 #include <eigen3/Eigen/Geometry>
 #include <vector>
+#include <string>
 
 struct transform{
+    int id;
+    std::string filename;
     Eigen::Quaterniond rot;
     Eigen::Vector3d translation;
     transform(Eigen::Quaterniond q, Eigen::Vector3d t)  : rot(q), translation(t) {}
+    transform(int id ,Eigen::Quaterniond q, Eigen::Vector3d t)  :id(id), rot(q), translation(t) {}
+    transform(int id, std::string f,Eigen::Quaterniond q, Eigen::Vector3d t)  :id(id),filename(f), rot(q), translation(t) {}
 };
 
 

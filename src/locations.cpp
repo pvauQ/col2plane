@@ -32,6 +32,7 @@ void filterReliableTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &i
 
 //returns map with str filename -> boost::ptr_list<cctag::ICCTag>> 
 std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::filesystem::path dir){
+
 	const std::size_t nCrowns{3};
 	cctag::Parameters params(nCrowns);
 	params.setUseCuda(true);
