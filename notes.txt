@@ -1,3 +1,7 @@
 build cctag with cuda
 be mindfull there is lot of depricated stuff..
-building is slow:(
+
+
+// things asumed
+
+only one camera for scene ( intrincts, extrincts) 19.12.2025

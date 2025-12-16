@@ -1,10 +1,11 @@
-#include "locations.h"
+#include "tag_locations.h"
 #include <eigen3/Eigen/Geometry>
 #include <cctag/CCTag.hpp>
 #include <opencv4/opencv2/opencv.hpp>
 #include <eigen3/Eigen/Geometry>
 #include <filesystem>
 #include <map>
+#include "tag_image_solver.h"
 
 
 void filterImagesWithNoTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &image_tags){
@@ -66,3 +67,4 @@ std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::fi
     }
     return image_markers;
 }
+

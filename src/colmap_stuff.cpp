@@ -39,3 +39,35 @@ std::vector<transform> getCameraTranforms(std::filesystem::path colmap_model_dir
 
 }
 
+// we asume just one camera for scene with id 1...
+cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
+    
+    std::string file = "cameras.txt";
+    std::ifstream input_stream(colmap_model_dir / file );
+    if (!input_stream.is_open()) {
+        throw std::runtime_error("Failed to open " + file);
+    }
+    Eigen::Matrix4d K ; // instricsts
+    Eigen::Vector4d distortion; 
+    std::string in_str;
+    while (getline(input_stream,in_str )) {
+        if (in_str.front() == '#'){
+            continue;
+        }
+        std::stringstream st(in_str);
+        std::string line, dummy;
+        int width, height;
+        double fx, fy, cx, cy, k1, k2, k3, k4;
+
+        st >> dummy >> width >> height >> fx >> fy >> cx >> cy >> k1 >> k2 >> k3 >> k4;
+        K << fx, 0, cx, 0,
+            0,  fy, cy, 0,
+            0,  0,  1, 0,
+            0,  0,  0, 1;
+
+        distortion << k1, k2, k3, k4;
+        break;
+                
+    }
+    return cameraParams(K,distortion);
+}

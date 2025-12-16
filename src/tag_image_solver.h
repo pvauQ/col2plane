@@ -17,7 +17,7 @@ struct transform{
 
 
 std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, std::vector<Eigen::Vector3d> image_points,
-                         Eigen::Matrix3d intrincts , Eigen::Vector4d distorion);
+                         Eigen::Matrix4d intrincts , Eigen::Vector4d distorion);
 
     
 

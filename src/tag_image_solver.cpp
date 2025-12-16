@@ -7,12 +7,14 @@
 
 
 // this should work for 4 points also?
+//returns vector of transforms: these transforms represent camera location relative  to
+// markers in the source image
 std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, std::vector<Eigen::Vector3d> image_points,
-                         Eigen::Matrix3d intrincts , Eigen::Vector4d distorion)
+                         Eigen::Matrix4d intrincts , Eigen::Vector4d distorion)
 {
 
     assert( image_points.size() == world_cords.size());
-    Eigen::Matrix3d k_a = intrincts;
+    Eigen::Matrix4d k_a = intrincts;
 
     // cv mailmaan hetkeksi
     cv::Mat dist = (cv::Mat_<double>(1,4) << distorion[0], distorion[1], distorion[2], distorion[3]); 
@@ -37,7 +39,12 @@ std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, 
     }
     int solutions = 0;
     std::vector<cv::Mat> rot_out, trans_out;
+
     if ( world_cords.size() == 3){
+        std::cout <<" solving  with 3 points \n"
+                << "im points: " << imagePoints
+                << "\n world points: " <<  objectPoints <<"\n";
+
         solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
     }
     else if (world_cords.size() == 4){
