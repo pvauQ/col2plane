@@ -78,9 +78,17 @@ int main(){
         // for now use the first image
         std::string image_name = three_tags.begin()->first;
 
+        // make sure that tags found in images are in same order as defined in world points
         auto &plist = three_tags.begin()->second;
+        plist.sort([](cctag::ICCTag const& a, cctag::ICCTag const& b) {
+             return a.id() < b.id();
+        });
+
+
         int num_read = 0;
+        std::cout << "solving using image: " << image_name << " tags used in";
         for (auto &tag : plist) {
+            std::cout << " " << tag.id() ;
             double x = static_cast<double>(tag.x());
             double y = static_cast<double>(tag.y());
             double z = 0.0;
@@ -88,6 +96,7 @@ int main(){
             if (num_read > 2) break;
             num_read++;
         };
+        std::cout<< std::endl;
         std::vector<transform> tag_based_cams =  solve3Tags1Img(world_points,imagePoints,colmap_cam_params.k,colmap_cam_params.distortion);
         for (auto &trans : tag_based_cams){
             std::cout << trans.filename << " was calculated to have rot and trans: \n" 

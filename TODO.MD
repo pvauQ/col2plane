@@ -25,5 +25,3 @@ with ccTag we want to do different modes, use opencv for now
 
 
 for all math convert to eigen as soon as possible. (opencv things look cursed)
-
- ! JÄRJESTÄ TÄGIT

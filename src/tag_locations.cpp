@@ -59,7 +59,7 @@ std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::fi
                 cctagDetection(boost_markers, pipeId, frameId, im, params);
                 // TODO: get away from boost stuf..
                 image_markers.emplace(entry.path().filename().string(), boost_markers);
-                std::cout << "image " << entry.path().filename().string() << " has " << boost_markers.size() << " markers\n";
+                std::cout << "image " << entry.path().filename().string() << " has " << boost_markers.size() << " possible markers\n";
                 }
         }
     } catch (const std::filesystem::filesystem_error& e) {
