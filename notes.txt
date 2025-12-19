@@ -1,6 +1,14 @@
 build cctag with cuda
-be mindfull there is lot of depricated stuff..
+be mindfull there is lot of depricated stuff.. ( in cctag)
 
+
+colmap cordinate system:
+x,              y,          z
+left->right     down->up    depth
+
+https://medium.com/red-buffer/mastering-3d-spaces-a-comprehensive-guide-to-coordinate-system-conversions-in-opencv-colmap-ef7a1b32f2df
+
+opencv käyttää samaa p3p
 
 // things asumed
 

@@ -3,16 +3,18 @@
 #include <eigen3/Eigen/Geometry>
 #include <filesystem>
 #include <iostream>
+#include <algorithm>
 #include "src/three_p_solve.h"
 #include "tag_image_solver.h"
 #include "tag_locations.h"
 #include "colmap_stuff.h"
 
+
 int main(){
 
     
     std::filesystem::path path("photodir/malli");
-    std::filesystem::path model_path  =path / "model";
+    std::filesystem::path model_path  =path ;
     //colmap osuus
     // colmapin tuottamat kamerat ja näiden transformit
     std::vector<transform> colmap_transforms;    
@@ -67,19 +69,26 @@ int main(){
     }
 
 
-    // let's say we want to solve with 3 tags
-    if ( three_tags.size()> 0){
+    // let's say we want to solve with 4 tags
+    if ( four_tags.size()> 0){
         std::vector<Eigen::Vector3d> world_points;
-        world_points.emplace_back(0.0f,  0.0f,  0.0f);  
-        world_points.emplace_back(0.105f, 0.0f,  0.0f); 
-        world_points.emplace_back(0.0f,  0.184f, 0.0f); 
-        
+        // kolme pistettä pysty
+        //world_points.emplace_back(0.0,  0.0,  0.0);  
+        //world_points.emplace_back(0.105, 0.0 ,  0.0); 
+        //world_points.emplace_back(0.0,  -0.0, 0.184); 
+        //neljä pistettä vaaka
+        world_points.emplace_back(0.0,  0.0,  0.0);
+        world_points.emplace_back(0.195,  0.0,  0.0);
+        world_points.emplace_back(0.195,  0.0,  -0.121);
+        world_points.emplace_back(0.0,  0.0,  -0.121);
+
+
         std::vector<Eigen::Vector3d> imagePoints;
         // for now use the first image
-        std::string image_name = three_tags.begin()->first;
+        std::string image_name = four_tags.begin()->first;
 
         // make sure that tags found in images are in same order as defined in world points
-        auto &plist = three_tags.begin()->second;
+        auto &plist = four_tags.begin()->second;
         plist.sort([](cctag::ICCTag const& a, cctag::ICCTag const& b) {
              return a.id() < b.id();
         });
@@ -93,15 +102,60 @@ int main(){
             double y = static_cast<double>(tag.y());
             double z = 0.0;
             imagePoints.emplace_back(Eigen::Vector3d(x, y, z));
-            if (num_read > 2) break;
+            if (num_read > 4 ) break;
             num_read++;
         };
         std::cout<< std::endl;
-        std::vector<transform> tag_based_cams =  solve3Tags1Img(world_points,imagePoints,colmap_cam_params.k,colmap_cam_params.distortion);
+
+        std::vector<matrixTransform> tag_based_cams =  solve3Tags1Img(world_points,imagePoints,colmap_cam_params.k,colmap_cam_params.distortion);
         for (auto &trans : tag_based_cams){
-            std::cout << trans.filename << " was calculated to have rot and trans: \n" 
-                << trans.rot << "\n" << trans.translation << "\n";
+            std::cout << " transform was calculated to have location defined by: \n" 
+                << trans.rotation << "\n" << trans.location << "\n";
         }
+
+        auto it = std::find_if(colmap_transforms.begin(), colmap_transforms.end(), 
+                            [image_name](transform x) { return x.filename == image_name; });
+        transform col_cam_trans = *it;
+        assert(col_cam_trans.filename == image_name);
+        matrixTransform col_cam_m_trans;
+
+        Eigen::Matrix3d col_rot = col_cam_trans.rot.toRotationMatrix();
+        Eigen::Vector3d col_trans = col_cam_trans.translation;
+        // nyt meillä on cctag kameran sijainti, ja colmap kameran sijainti
+        // tekoäly sanoo seuraavaa ->  nämä on periaateessa world to camera
+        // ja jotta tässä diffissä on järkeä täytyy muunnos tapahtua cam-> world
+
+        std::vector<matrixTransform> possible_solutions;
+        for (auto &trans : tag_based_cams){
+            //
+            Eigen::Matrix3d R_2world_colmap = col_rot.transpose();
+            Eigen::Vector3d t_2world_colmap = -col_rot.transpose() * col_trans;
+            Eigen::Matrix3d R_2world_p3p = trans.rotation.transpose();
+            Eigen::Vector3d t_2world_p3p = -trans.rotation.transpose() * trans.location;
+
+
+            Eigen::Matrix3d rotation_dif = R_2world_p3p *R_2world_colmap.transpose();
+            Eigen::Vector3d transpose_dif = t_2world_p3p - rotation_dif * t_2world_colmap;
+            matrixTransform sol;
+            sol.rotation = rotation_dif;
+            sol.location = transpose_dif;
+            possible_solutions.push_back(sol);
+        }
+        // nyt meillä on ratkaisut jotka siirtävät colmap kameran cctag kameran sijaintiin
+
+        // mennään quaternion + trans vector maailmaan koska colmap haluaa semmoisen;
+        int ind = 0;
+        for (auto &sol: possible_solutions){
+            transToFile(Eigen::Quaterniond(sol.rotation), sol.location, std::to_string(ind));
+            ind++;
+        }
+
+        // etsitään se
+        // ->  rot + trans
+        // ratkaistaan rotaatio joka siitää colmap kameran cctag kameraan
+        // /M+t) * colmap M,t = cctag M t
+
+
     }
     else{
         std::cout << "not enough tags found \n";

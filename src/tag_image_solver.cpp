@@ -9,18 +9,25 @@
 // this should work for 4 points also?
 //returns vector of transforms: these transforms represent camera location relative  to
 // markers in the source image
-std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, std::vector<Eigen::Vector3d> image_points,
-                         Eigen::Matrix4d intrincts , Eigen::Vector4d distorion)
+std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_cords, std::vector<Eigen::Vector3d> &image_points,
+                         Eigen::Matrix4d &intrinsics , Eigen::Vector4d &distorion)
 {
 
     assert( image_points.size() == world_cords.size());
-    Eigen::Matrix4d k_a = intrincts;
+    Eigen::Matrix4d k_a = intrinsics;
 
-    // cv mailmaan hetkeksi
-    cv::Mat dist = (cv::Mat_<double>(1,4) << distorion[0], distorion[1], distorion[2], distorion[3]); 
-    cv::Mat K = (cv::Mat_<double>(3,3) << k_a(0,0), k_a(0,1), k_a(0,2),
-                                            k_a(1,0), k_a(1,1), k_a(1,2),
-                                            k_a(2,0), k_a(2,1), k_a(2,2));
+    //// cv mailmaan hetkeksi
+    //cv::Mat dist = (cv::Mat_<double>(1,4) << distorion[0], distorion[1], distorion[2], distorion[3]); 
+    //cv::Mat K = (cv::Mat_<double>(3,3) << k_a(0,0), k_a(0,1), k_a(0,2),
+    //                                        k_a(1,0), k_a(1,1), k_a(1,2),
+    //                                        k_a(2,0), k_a(2,1), k_a(2,2));
+
+    cv::Mat dist = (cv::Mat_<double>(1,4) << -0.1603, 0.1321, -0.0012, -0.0016); 
+    cv::Mat K = (cv::Mat_<double>(3,3) << 4307.054, 0, 2592,
+                                        0, 4293.814,  1728,
+                                        0,      0,      1);
+    
+                                        
 
     std::vector<cv::Point3f> objectPoints;
     std::vector<cv::Point2f> imagePoints;
@@ -38,38 +45,44 @@ std::vector<transform> solve3Tags1Img(std::vector<Eigen::Vector3d> world_cords, 
             static_cast<float>(image_points[i].y()));
     }
     int solutions = 0;
-    std::vector<cv::Mat> rot_out, trans_out;
+    std::vector<cv::Mat> rot_out, trans_out,rot_matices;
 
-    if ( world_cords.size() == 3){
+    if ( world_cords.size() == 4){
         std::cout <<" solving  with 3 points \n"
                 << "im points: " << imagePoints
                 << "\n world points: " <<  objectPoints <<"\n";
 
         solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
     }
-    else if (world_cords.size() == 4){
-        solutions = cv::solvePnP(objectPoints, imagePoints,K, dist, rot_out, trans_out);
-    }
     std::cout << "Found "  <<solutions <<  " solutions" << std::endl;
-    
-    
-    // pois cv maailmasta:
-    std::vector<Eigen::Vector3d> rotations_rodri; // this can be deleted
-    std::vector<Eigen::Quaterniond> rot_quat;
-    std::vector<Eigen::Vector3d> translations;
-
-    std::vector<transform> transforms;//quat+trans
-
-    for(size_t i = 0; i < rot_out.size(); ++i) { //AI
-        rotations_rodri.emplace_back(Eigen::Map<Eigen::Vector3d>(rot_out[i].ptr<double>()));
-        translations.emplace_back(Eigen::Map<Eigen::Vector3d>(trans_out[i].ptr<double>()));
-        
-        Eigen::AngleAxisd angle_axis(rotations_rodri[i].norm(), rotations_rodri[i].normalized());
-        Eigen::Quaterniond quat(angle_axis);
-        rot_quat.push_back(quat);
-        //sanity
-        std::cout << translations[i] <<  quat << "\n" ;
-        transforms.push_back(transform(rot_quat[0],translations[0]));
+    for (int i = 0; i < solutions; i++){
+        cv::Mat r_matrix;
+        cv::Rodrigues(rot_out[i],r_matrix);  
+        rot_matices.push_back(r_matrix);        
+        std::cout<<r_matrix<< " \n";
     }
-    return transforms;
+    assert(rot_matices.size() == solutions);
+
+    // takaisin eigen maailmaan ->
+    std::vector<Eigen::Matrix3d> rotations;
+    std::vector<Eigen::Vector3d> translations;
+    rotations.reserve(rot_matices.size());
+    translations.reserve(trans_out.size());
+
+    for(size_t i = 0; i < solutions; ++i) {
+        assert(rot_matices[i].rows == 3 && rot_matices[i].cols == 3) ;
+        assert(trans_out[i].rows == 3 && trans_out[i].cols == 1);
+        rotations[i] = Eigen::Map<const Eigen::Matrix3d>(rot_matices[i].ptr<double>(), 3, 3);
+
+        translations[i] = Eigen::Map<const Eigen::Vector3d>(trans_out[i].ptr<double>(), 3);
+
+    }
+    std::vector<matrixTransform> trans;
+    for(size_t i = 0; i < solutions; ++i) {
+        matrixTransform kissa;
+        kissa.rotation = rotations[i];
+        kissa.location = translations[i];
+        trans.push_back(kissa);
+    }
+    return trans;
 }

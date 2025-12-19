@@ -115,9 +115,6 @@ void transToFile (cv::Quatd rotation, cv::Vec3d trans){
                << trans[0]    << " " 
                << trans[1]    << " " 
                << trans[2]    << "\n "; 
-
-
-
 }
 
 void transformPoints(cv::Vec3d translation){

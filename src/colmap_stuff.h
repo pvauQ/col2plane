@@ -16,4 +16,7 @@ struct cameraParams{
 std::vector<transform> getCameraTranforms(std::filesystem::path colmap_model_dir);
 cameraParams getCameraParameters(std::filesystem::path colmap_model_dir);
 
+void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::string name_prefix);
+void camerasTofile(std::vector<transform> cameras);
+
 #endif

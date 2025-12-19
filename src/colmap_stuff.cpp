@@ -36,8 +36,8 @@ std::vector<transform> getCameraTranforms(std::filesystem::path colmap_model_dir
     }
     std::cout << "colmap model had " << transforms.size() << " images with transforms \n";
     return transforms;
-
 }
+
 
 // we asume just one camera for scene with id 1...
 cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
@@ -47,7 +47,7 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
     if (!input_stream.is_open()) {
         throw std::runtime_error("Failed to open " + file);
     }
-    Eigen::Matrix4d K ; // instricsts
+    Eigen::Matrix4d K ; // intrinsics
     Eigen::Vector4d distortion; 
     std::string in_str;
     while (getline(input_stream,in_str )) {
@@ -55,19 +55,44 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
             continue;
         }
         std::stringstream st(in_str);
-        std::string line, dummy;
-        int width, height;
+        std::string dummy;
+        int id,  width, height;
         double fx, fy, cx, cy, k1, k2, k3, k4;
-
-        st >> dummy >> width >> height >> fx >> fy >> cx >> cy >> k1 >> k2 >> k3 >> k4;
+        st >> id >> dummy >> width >> height >> fx >> fy >> cx >> cy >> k1 >> k2 >> k3 >> k4;
         K << fx, 0, cx, 0,
-            0,  fy, cy, 0,
-            0,  0,  1, 0,
-            0,  0,  0, 1;
-
+        0,  fy, cy, 0,
+        0,  0,  1, 0,
+        0,  0,  0, 1;
+        
         distortion << k1, k2, k3, k4;
         break;
-                
     }
+    std::cout << "intrinsics:\n " << K << "\n";
     return cameraParams(K,distortion);
+}
+
+//The matrix.txt file is expected to contain scale qw qx qy qz tx ty tz and not the 4x4 transformation matrix. See Sim3d::FromFile.
+// this is  the format expected by colmap model_transformer
+void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::string name_prefix){
+    std::string file =  name_prefix + "transformation.txt";
+    std::ofstream out_stream(file);
+
+    if (!out_stream.is_open()) {
+        throw std::runtime_error("Failed to open " + file);
+    }
+    out_stream << std::setprecision(std::numeric_limits<double>::digits10 + 2);
+
+    out_stream << 1 << " " 
+               << rotation.w() << " " 
+               << rotation.x() << " " 
+               << rotation.y() << " " 
+               << rotation.z() << " " 
+               << trans[0]    << " " 
+               << trans[1]    << " " 
+               << trans[2]    << "\n "; 
+}
+
+// to produce output for colmap model_aligner;
+void camerasTofile(std::vector<transform> cameras) {
+    return;
 }

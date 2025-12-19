@@ -9,6 +9,13 @@ n - [x] find cctags from images
 6 - [] aja colmap model_transform tällä.
 7 - [] model_aligner vs model_transformer
 
+https://colmap.github.io/faq.html#geo-registration
+model_aligner: Align/geo-register model to coordinate system of given camera centers.
+    - Geo register using calculated camera cordinates. this need multiple frames to be calculated
+model_transformer: Transform coordinate frame of a model.
+    - Give 
+https://colmap.github.io/cli.html
+
 
 with ccTag we want to do different modes, use opencv for now
 [] 4 tags pnp no ambiquity
