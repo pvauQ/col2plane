@@ -1,166 +1,34 @@
+
 #include <iostream>
-#include <opencv4/opencv2/opencv.hpp>
-#include <eigen3/Eigen/Geometry>
-#include <filesystem>
-#include <iostream>
-#include <algorithm>
-#include "src/three_p_solve.h"
-#include "tag_image_solver.h"
-#include "tag_locations.h"
-#include "colmap_stuff.h"
+#include <string>
+#include "src/col2plane.h"
 
+int main(int argc, char* argv[])
+{
+    std::cout << "You have entered " << argc
+         << " arguments:" << std::endl;
 
-int main(){
-
-    
-    std::filesystem::path path("photodir/malli");
-    std::filesystem::path model_path  =path ;
-    //colmap osuus
-    // colmapin tuottamat kamerat ja näiden transformit
-    std::vector<transform> colmap_transforms;    
-    colmap_transforms =  getCameraTranforms(model_path);
-    cameraParams colmap_cam_params(getCameraParameters(model_path));
-    // cctag osuus
-    // cctagin tuottamat tagien sijainnit kuvissa.
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> image_tags;
-    image_tags = readTagsFromImages(path);
-    std::cout << "total images scanned " << image_tags.size() << "\n";
-    filterImagesWithNoTags(image_tags);
-    std::cout << "images_with_ some tags " << image_tags.size() << "\n";
-    filterReliableTags(image_tags);
-    std::cout << "images_with reliable tags " << image_tags.size() << "\n";
-
-    //matikka osuus..
-    
-    // kameran sijainti tagien suhteen kuvassa x, x2, miten valita x haluaisin sortata colmap virheen kautta
-    // mutta per frame täytyy laskea manuaalisesti joten for now on -> use one of the images 
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> many_tags;
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> four_tags;
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> three_tags;
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> two_tags;
-    std::map<std::string, boost::ptr_list<cctag::ICCTag>> one_tag;
-
-    for (auto map_it = image_tags.begin(); map_it != image_tags.end(); ) {
-        switch (map_it->second.size()) {
-            case 0:
-                ++map_it;  
-                break;
-            case 1:
-                one_tag.emplace(map_it->first, std::move(map_it->second));
-                map_it = image_tags.erase(map_it);
-                break;
-            case 2:
-                two_tags.emplace(map_it->first, std::move(map_it->second));
-                map_it = image_tags.erase(map_it);
-                break;
-            case 3:
-                three_tags.emplace(map_it->first, std::move(map_it->second));
-                map_it = image_tags.erase(map_it);
-                break;
-            case 4:
-                four_tags.emplace(map_it->first, std::move(map_it->second));
-                map_it = image_tags.erase(map_it);
-                break;
-            default:  // size > 4 or size == 0
-                many_tags.emplace(map_it->first, std::move(map_it->second));
-                map_it = image_tags.erase(map_it);
-                break;
+    std::string tag_txt = "";
+    // Using a while loop to iterate through arguments
+    int i = 0;
+    while (i < argc) {
+        std:: cout << "Argument " << i  << ": " << argv[i]
+             << std:: endl;
+        
+        if (i ==  1){
+            tag_txt = argv[i];
         }
+        i++;
     }
-
-
-    // let's say we want to solve with 4 tags
-    if ( four_tags.size()> 0){
-        std::vector<Eigen::Vector3d> world_points;
-        // kolme pistettä pysty
-        //world_points.emplace_back(0.0,  0.0,  0.0);  
-        //world_points.emplace_back(0.105, 0.0 ,  0.0); 
-        //world_points.emplace_back(0.0,  -0.0, 0.184); 
-        //neljä pistettä vaaka
-        world_points.emplace_back(0.0,  0.0,  0.0);
-        world_points.emplace_back(0.195,  0.0,  0.0);
-        world_points.emplace_back(0.195,  0.0,  -0.121);
-        world_points.emplace_back(0.0,  0.0,  -0.121);
-
-
-        std::vector<Eigen::Vector3d> imagePoints;
-        // for now use the first image
-        std::string image_name = four_tags.begin()->first;
-
-        // make sure that tags found in images are in same order as defined in world points
-        auto &plist = four_tags.begin()->second;
-        plist.sort([](cctag::ICCTag const& a, cctag::ICCTag const& b) {
-             return a.id() < b.id();
-        });
-
-
-        int num_read = 0;
-        std::cout << "solving using image: " << image_name << " tags used in";
-        for (auto &tag : plist) {
-            std::cout << " " << tag.id() ;
-            double x = static_cast<double>(tag.x());
-            double y = static_cast<double>(tag.y());
-            double z = 0.0;
-            imagePoints.emplace_back(Eigen::Vector3d(x, y, z));
-            if (num_read > 4 ) break;
-            num_read++;
-        };
-        std::cout<< std::endl;
-
-        std::vector<matrixTransform> tag_based_cams =  solve3Tags1Img(world_points,imagePoints,colmap_cam_params.k,colmap_cam_params.distortion);
-        for (auto &trans : tag_based_cams){
-            std::cout << " transform was calculated to have location defined by: \n" 
-                << trans.rotation << "\n" << trans.location << "\n";
-        }
-
-        auto it = std::find_if(colmap_transforms.begin(), colmap_transforms.end(), 
-                            [image_name](transform x) { return x.filename == image_name; });
-        transform col_cam_trans = *it;
-        assert(col_cam_trans.filename == image_name);
-        matrixTransform col_cam_m_trans;
-
-        Eigen::Matrix3d col_rot = col_cam_trans.rot.toRotationMatrix();
-        Eigen::Vector3d col_trans = col_cam_trans.translation;
-        // nyt meillä on cctag kameran sijainti, ja colmap kameran sijainti
-        // tekoäly sanoo seuraavaa ->  nämä on periaateessa world to camera
-        // ja jotta tässä diffissä on järkeä täytyy muunnos tapahtua cam-> world
-
-        std::vector<matrixTransform> possible_solutions;
-        for (auto &trans : tag_based_cams){
-            //
-            Eigen::Matrix3d R_2world_colmap = col_rot.transpose();
-            Eigen::Vector3d t_2world_colmap = -col_rot.transpose() * col_trans;
-            Eigen::Matrix3d R_2world_p3p = trans.rotation.transpose();
-            Eigen::Vector3d t_2world_p3p = -trans.rotation.transpose() * trans.location;
-
-
-            Eigen::Matrix3d rotation_dif = R_2world_p3p *R_2world_colmap.transpose();
-            Eigen::Vector3d transpose_dif = t_2world_p3p - rotation_dif * t_2world_colmap;
-            matrixTransform sol;
-            sol.rotation = rotation_dif;
-            sol.location = transpose_dif;
-            possible_solutions.push_back(sol);
-        }
-        // nyt meillä on ratkaisut jotka siirtävät colmap kameran cctag kameran sijaintiin
-
-        // mennään quaternion + trans vector maailmaan koska colmap haluaa semmoisen;
-        int ind = 0;
-        for (auto &sol: possible_solutions){
-            transToFile(Eigen::Quaterniond(sol.rotation), sol.location, std::to_string(ind));
-            ind++;
-        }
-
-        // etsitään se
-        // ->  rot + trans
-        // ratkaistaan rotaatio joka siitää colmap kameran cctag kameraan
-        // /M+t) * colmap M,t = cctag M t
-
-
+    // ajetaanko cctag vai käytetäänkö tallennettuja.
+    Col2Plane instance;
+    if (tag_txt != ""){
+        instance.withPrecalulated(tag_txt);
     }
     else{
-        std::cout << "not enough tags found \n";
+        instance.calcCctag();
     }
+    instance.col2CctSpace(4);
 
-
+    return 0;
 }
-

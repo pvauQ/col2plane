@@ -48,18 +48,18 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
     std::vector<cv::Mat> rot_out, trans_out,rot_matices;
 
     if ( world_cords.size() == 4){
-        std::cout <<" solving  with 3 points \n"
-                << "im points: " << imagePoints
-                << "\n world points: " <<  objectPoints <<"\n";
+        std::cout <<" solving  with " << world_cords.size() << " points \n"
+                << "im points: \n" << imagePoints
+                << "\n world points:\n " <<  objectPoints <<"\n";
 
         solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
     }
-    std::cout << "Found "  <<solutions <<  " solutions" << std::endl;
+    std::cout << "Found "  <<solutions <<  " solutions ( rot matrix)" << std::endl;
     for (int i = 0; i < solutions; i++){
         cv::Mat r_matrix;
         cv::Rodrigues(rot_out[i],r_matrix);  
         rot_matices.push_back(r_matrix);        
-        std::cout<<r_matrix<< " \n";
+        //std::cout<<r_matrix<< " \n";
     }
     assert(rot_matices.size() == solutions);
 
