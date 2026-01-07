@@ -8,30 +8,9 @@
 #include "tag_image_solver.h"
 
 
-void filterImagesWithNoTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &image_tags){
-
-    for (auto it = image_tags.begin(); it != image_tags.end(); ) {
-        if (it->second.size() == 0) {
-            it = image_tags.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
-void filterReliableTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &image_tags){
-    for (auto it = image_tags.begin(); it != image_tags.end(); it++) {
-        for (auto se = it->second.begin(); se != it->second.end();){
-            if(se->getStatus() != 1){
-                se = it->second.erase(se); //magic
-            } else {
-                ++se;
-            }
-        }
-        std::cout << it->first << " has  " << it->second.size() << " valid markers \n";
-    }
-}
 
 //returns map with str filename -> boost::ptr_list<cctag::ICCTag>> 
+// this does the stuff related to cctag
 std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::filesystem::path dir){
 
 	const std::size_t nCrowns{3};

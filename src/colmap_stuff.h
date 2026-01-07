@@ -4,7 +4,7 @@
 #include <cctag/CCTag.hpp>
 #include "tag_image_solver.h"
 #include <eigen3/Eigen/Geometry>
-
+#include <vector>
 struct cameraParams{
     Eigen::Matrix4d k; //intrincts
     Eigen::Vector4d distortion;
@@ -18,5 +18,5 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir);
 
 void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::string name_prefix);
 void camerasTofile(std::vector<transform> cameras);
-
+void camerasTofile(std::vector<matrixTransform> cameras);
 #endif

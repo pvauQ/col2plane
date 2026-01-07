@@ -16,12 +16,20 @@ struct transform{
 };
 
 struct matrixTransform{
+    Eigen::Vector3d derived_location;
     Eigen::Matrix3d rotation;
     Eigen::Vector3d location;
+    std::string filename;
+    matrixTransform() = default; 
+    matrixTransform(Eigen::Vector3d vec) : location(vec){}
+    matrixTransform(Eigen::Vector3d vec, Eigen::Matrix3d mat) : location(vec), rotation(mat) {}
 };
 
 
 std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_cords, std::vector<Eigen::Vector3d> &image_points,
+                         Eigen::Matrix4d &intrincts , Eigen::Vector4d &distorion);
+
+matrixTransform solveNTags1Img(std::vector<Eigen::Vector3d> &world_cords, std::vector<Eigen::Vector3d> &image_points,
                          Eigen::Matrix4d &intrincts , Eigen::Vector4d &distorion);
 
     

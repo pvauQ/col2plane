@@ -9,7 +9,4 @@
 
 std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::filesystem::path dir);
 
-void filterImagesWithNoTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &image_tags);
-
-void filterReliableTags(std::map<std::string, boost::ptr_list<cctag::ICCTag>> &image_tags);
 #endif
