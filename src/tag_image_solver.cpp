@@ -52,8 +52,11 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
 
         solutions = cv::solveP3P(objectPoints, imagePoints,K, dist, rot_out, trans_out, cv::SOLVEPNP_P3P);    
     }
+    std::vector<double> reperr = calcReProjError(objectPoints, imagePoints,rot_out, trans_out, K,dist);
+
     //std::cout << "Found "  <<solutions <<  " solutions "  << std::endl;
     for (int i = 0; i < solutions; i++){
+        //std::cout << "reprojection error  " << i << " " << reperr[i] << "\n";
         cv::Mat r_matrix;
         cv::Rodrigues(rot_out[i],r_matrix);  
         rot_matices.push_back(r_matrix);        
@@ -81,8 +84,9 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
     std::vector<matrixTransform> trans;
     for(size_t i = 0; i < solutions; ++i) {
         matrixTransform kissa;
+        kissa.error = reperr[i];
         kissa.rotation =  rotations[i].transpose(); // inverse of rotation world to cam 
-        kissa.location =   translations[i]; // inverse of translation world to cam
+        kissa.location =   -translations[i]; // inverse of translation world to cam
         trans.push_back(kissa);
     }
     return trans;
@@ -171,17 +175,18 @@ matrixTransform solveNTags1Img(std::vector<Eigen::Vector3d> &world_cords, std::v
 
 
 
-float reproj_error(const std::vector<cv::Point3f>& obj_pts,
-                   const std::vector<cv::Point2f>& img_pts,
-                   const cv::Mat& rvec, const cv::Mat& tvec,
-                   const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs) {
-    std::vector<cv::Point2f> projected_pts;
-    cv::projectPoints(obj_pts, rvec, tvec, cameraMatrix, distCoeffs, projected_pts);
-    
-    float sum_err = 0.0f;
-    for (size_t i = 0; i < obj_pts.size(); ++i) {
-        cv::Point2f pErr = img_pts[i] - projected_pts[i];
-        sum_err += pErr.dot(pErr);
+std::vector<double> calcReProjError( std::vector<cv::Point3d> objectPoints, std::vector<cv::Point2d> imagePoints,
+                        std::vector<cv::Mat> rvec, std::vector<cv::Mat> tvec,
+                        cv::Mat cameraMatrix, cv::Mat distCoeffs)
+{
+    std::vector<double> repErrors;
+    for(int i = 0; i< rvec.size() ; i++){
+        std::vector<cv::Point2d> projected;
+        cv::projectPoints(objectPoints, rvec[i], tvec[i], cameraMatrix, distCoeffs, projected);
+        double error = cv::norm(imagePoints, projected, cv::NORM_L2);
+        double reProjError = error / objectPoints.size();
+        repErrors.push_back(reProjError);
+        // halutaanko päätellä jotain yksittäisten pisteiden virheistä?
     }
-    return std::sqrt(sum_err / obj_pts.size());  // RMS error
+    return repErrors;
 }

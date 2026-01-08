@@ -84,10 +84,10 @@ void Col2Plane::col2CctSpace(int num_tags){
                 }
                 std::vector<matrixTransform> output =  solve3Tags1Img(world_pos, image_pos,colmap_cam_params.k, colmap_cam_params.distortion);
                 if (output.size() >0){
-                    matrixTransform tmp = output[0];
-                    tmp.filename = im.image_name; // opencv sorts these by error, so first one should be the "correct ..."
+                    matrixTransform tmp = output[0]; // first one has alway the lowest error
+                    tmp.filename = im.image_name; 
                     tmp.location = tmp.location;
-                    tmp.derived_location = tmp.rotation * -tmp.location; //matrix * translation
+                    tmp.derived_location = tmp.rotation * tmp.location; //matrix * translation
                     tag_based_cam_trans.push_back(tmp);
                 }
                 /*
@@ -106,13 +106,39 @@ void Col2Plane::col2CctSpace(int num_tags){
         break;
     }
 
-    cameraPosOutput(tag_based_cam_trans);
+    
+    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,1.5);
+    cameraPosOutput(filtered_cams);
 
 
 
     return;
 
 }
+
+std::vector<matrixTransform> FilterByError(std::vector<matrixTransform> &  i_transforms , double max_error){
+    std::vector<matrixTransform> out;
+    //todo: laske avg virhe..
+    for (const auto& trans : i_transforms){
+        if ( trans.error < max_error)
+        out.push_back(trans);
+    }
+    return out;
+}
+std::vector<matrixTransform> FilterBestN(std::vector<matrixTransform>   i_transforms , size_t num_out){
+    std::vector<matrixTransform> out;
+    // by value koska pidetään alkuperäinen alkuperäisenä..
+     sort(i_transforms.begin(), i_transforms.end(),
+             [](const matrixTransform a,const matrixTransform b ) {
+        return a.error < b.error; 
+    });
+    size_t max_iters  = std::min(num_out, i_transforms.size());
+    for (int i = 0; i <max_iters; i++){
+        out.push_back(i_transforms[i]);
+    }
+    return out;
+}
+
 
 // Writes file to be used in colmap model aligner
 // This requires only raw locations of the cameras in the world <- from cctag -> p3p
@@ -121,6 +147,7 @@ void Col2Plane::cameraPosOutput(std::vector<matrixTransform>& transforms){
         std::cout << "least 3 cams needed for colmap model aligner we have " << transforms.size() << "\n";
         return;
     }
+    std::cout << "writing " << transforms.size() << " cam locations" << "\n";
     //https://colmap.github.io/faq.html#geo-registration
     
     camerasTofile(transforms);

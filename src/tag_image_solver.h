@@ -20,6 +20,7 @@ struct matrixTransform{
     Eigen::Matrix3d rotation;
     Eigen::Vector3d location;
     std::string filename;
+    double error; // i use this to store reprojection error when transform represents camera location;
     matrixTransform() = default; 
     matrixTransform(Eigen::Vector3d vec) : location(vec){}
     matrixTransform(Eigen::Vector3d vec, Eigen::Matrix3d mat) : location(vec), rotation(mat) {}
@@ -32,8 +33,9 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
 matrixTransform solveNTags1Img(std::vector<Eigen::Vector3d> &world_cords, std::vector<Eigen::Vector3d> &image_points,
                          Eigen::Matrix4d &intrincts , Eigen::Vector4d &distorion);
 
-    
-transform diffrence(transform &a, transform &b );
+std::vector<double> calcReProjError( std::vector<cv::Point3d> objectPoints, std::vector<cv::Point2d> imagePoints,
+                        std::vector<cv::Mat> rvec, std::vector<cv::Mat> tvec,
+                        cv::Mat cameraMatrix, cv::Mat distCoeffs);
 
 
 #endif

@@ -26,5 +26,7 @@ class Col2Plane
     std::vector<CctagFileHelper::tagInfo> tags;
     std::map<int,Eigen::Vector3d> marker_word_pos;
 };
+std::vector<matrixTransform> FilterBestN(std::vector<matrixTransform>   i_transforms , size_t num_out);
+std::vector<matrixTransform> FilterByError(std::vector<matrixTransform> &  i_transforms , double max_error);
 
 #endif
