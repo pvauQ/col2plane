@@ -15,10 +15,11 @@
 Col2Plane::Col2Plane(){
     //set marker world positions;
     // asume wrong order as printed clocwise starting from upper left -> 3,1,2,0
-    this->marker_word_pos.emplace(0,Eigen::Vector3d(0.0,  0.0,  0.0));
-    this->marker_word_pos.emplace(3,Eigen::Vector3d(0.0,  0.121,  0.0));
-    this->marker_word_pos.emplace(1,Eigen::Vector3d(0.195,  0.121,  0.05));
-    this->marker_word_pos.emplace(2,Eigen::Vector3d(0.195,  0.0,  0.0));
+    //this->marker_word_pos.emplace(0,Eigen::Vector3d(0.0,  0.0,  0.0));
+    //this->marker_word_pos.emplace(3,Eigen::Vector3d(0.0,  0.121,  0.0));
+    //this->marker_word_pos.emplace(1,Eigen::Vector3d(0.195,  0.121,  0.05));
+    //this->marker_word_pos.emplace(2,Eigen::Vector3d(0.195,  0.0,  0.0));
+    this->marker_word_pos =  CctagFileHelper::TagWorldLocationFromFile(std::filesystem::path("/tag_world_pos.txt"))
     
 }
 

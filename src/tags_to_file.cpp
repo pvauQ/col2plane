@@ -90,7 +90,7 @@ std::vector<tagInfo> readTagsFromtxt(std::filesystem::path path) {
     std::vector<tagInfo> tags;
     std::ifstream in_stream(path);
     if (!in_stream.is_open()) {
-        throw std::runtime_error("Failed to open tags.txt");
+        throw std::runtime_error("Failed to open " << path);
     }
     std::string line;
     std::getline(in_stream, line);
@@ -112,5 +112,35 @@ std::vector<tagInfo> readTagsFromtxt(std::filesystem::path path) {
         tags.push_back(std::move(info));
     }
     return tags;
+}
+
+/*
+file format:
+line starting with # <-info we do not care
+id x  y z \n
+where id int x,y,z float 
+each line represent location of one cctag marker in world cordinates
+*/
+std::map<int,Eigen::Vector3d> TagWorldLocationFromFile(std::filesystem::path path){
+    std::map<int,Eigen::Vector3d> tag_locs
+    std::ifstream in_stream(path);
+    if (!in_stream.is_open()) {
+        throw std::runtime_error("Failed to open " << path);
+    }
+    std::string line;
+    std::getline(in_stream, line);
+    
+    while (std::getline(in_stream, line)) {
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+        
+        std::istringstream iss(line);
+        int id;
+        double x,y,z;
+        iss >> id >> x >> y >> z;
+        
+        tag_locs.emplace(id,Eigen::Vector3d(x,  y,  z));
+        
+    }
 }
 }

@@ -19,6 +19,7 @@ struct tagInfo{
 std::vector<tagInfo> readTagsFromImages(std::filesystem::path dir);
 std::vector<tagInfo> readTagsFromtxt(std::filesystem::path path);
 void saveTagsToFile(std::filesystem::path dir, std::vector<tagInfo> tags);
+std::map<int,Eigen::Vector3d> TagWorldLocationFromFile(std::filesystem::path path);
 
 };
 #endif
