@@ -6,10 +6,11 @@
 #include <string>
 
 struct transform{
-    int id;
-    std::string filename;
+    int id; // cam id
+    std::string filename; // when used for camera
     Eigen::Quaterniond rot;
     Eigen::Vector3d translation;
+    transform()=default;
     transform(Eigen::Quaterniond q, Eigen::Vector3d t)  : rot(q), translation(t) {}
     transform(int id ,Eigen::Quaterniond q, Eigen::Vector3d t)  :id(id), rot(q), translation(t) {}
     transform(int id, std::string f,Eigen::Quaterniond q, Eigen::Vector3d t)  :id(id),filename(f), rot(q), translation(t) {}
@@ -20,7 +21,7 @@ struct matrixTransform{
     Eigen::Matrix3d rotation;
     Eigen::Vector3d location;
     std::string filename;
-    double error; // i use this to store reprojection error when transform represents camera location;
+    double error; // i use this to store reprojection error when transform represents camera location(calculate from cctags)
     matrixTransform() = default; 
     matrixTransform(Eigen::Vector3d vec) : location(vec){}
     matrixTransform(Eigen::Vector3d vec, Eigen::Matrix3d mat) : location(vec), rotation(mat) {}

@@ -1,13 +1,17 @@
+WHEN HAVING PROBLEMS. CHECK THAT CCTAG  generates correct output!! it's broken on  ubuntu 24.04...
+
 
 
 start wih colmap model
 1 - [] sort colmap images by lovest error
 n - [x] find cctags from images 
-3 - [] calculate p3p for n best image tag pairs (location of camera)
+3 - [x] calculate p3p for n best image tag pairs (location of camera)
 4 - [] calculate difrence between colmap image location and one we calulate 
 5 - [] store this is in transforms.txt as S quat trans
-6 - [] aja colmap model_transform tällä.
-7 - [] model_aligner vs model_transformer
+    -broken.
+6 - [] 
+7 - [x] model_aligner vs model_transformer
+    -- model aligner on kiva ja hauska, koska ei tarvitse itse selvittää skaalaa.
 
 https://colmap.github.io/faq.html#geo-registration
 model_aligner: Align/geo-register model to coordinate system of given camera centers.
@@ -18,16 +22,28 @@ https://colmap.github.io/cli.html
 
 
 with ccTag we want to do different modes, use opencv for now
-[] 4 tags pnp no ambiquity
+[x] 4 tags pnp no ambiquity p3p
+    -- selecting best pictures lowest avg repojection error
+        -- this works real nice, least 3 cam centers needed for model_aligner
 [] 3 tags use pnp multiple images to  take care of ambiquity
-[x] 3 tags  with ambiquity
+[x] 3 tags  with ambiquity p3p
+
+[] any number of tags, using colmap cameras, and lm solver.
+    ->triangulate from known tag locations to camera.
+    <-  point must be vissible from  least 3 cams. more cams more better.
+    ...do this for multiple points to estabilish a scale.
+
 [] 2 tags use homography and circle ellipse property to calculate plane. and locations for orientation
-[] 2 tags use pnp from multiple images
+
 [] single tag, use homography to estabilish a a plane.
 
 
-[] figure out how to make cctag have actual outputfile, so i dont need to parse, or use as lib
+[x] figure out how to make cctag have actual outputfile, so i dont need to parse, or use as lib
+    --tag locations for images are outputed to tags.txt and then that file can be used. 
+    .. just give that file as argument.
 [] figure out if it's usefull to have cctag as lib in the proces
+    .. cctag is only required for finding tags.  so probably usfull to have own executable for it.  
+
 [] make a script that automates all this!
 
 

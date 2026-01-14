@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     else{
         instance.calcCctag();
     }
-    instance.col2CctSpace(4);
+    instance.col2CctSpace(solve_mode::LM_SOLVE);
 
     return 0;
 }

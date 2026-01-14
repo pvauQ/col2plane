@@ -7,10 +7,10 @@
 
 namespace CctagFileHelper{
 
-struct tagInfo{
+struct tagInfo{ // this tells what tags are visible in what image and where tey are
     std::string image_name;
     std::vector<std::pair<double,double>> coordinates;
-    std::vector<int> ids;
+    std::vector<int> ids; // tag ids
     // ellipse stuff
 
 

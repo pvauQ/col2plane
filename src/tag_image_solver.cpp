@@ -27,6 +27,7 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
     std::vector<cv::Point3d> objectPoints;
     std::vector<cv::Point2d> imagePoints;
 
+
     objectPoints.reserve(world_cords.size());
     imagePoints.reserve(image_points.size());
 
@@ -91,10 +92,6 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
     }
     return trans;
 }
-
-
-
-
 
 
 
