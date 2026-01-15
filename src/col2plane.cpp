@@ -15,13 +15,7 @@
 
 Col2Plane::Col2Plane(){
     //set marker world positions;
-    // asume wrong order as printed clocwise starting from upper left -> 3,1,2,0
-    //this->marker_word_pos.emplace(0,Eigen::Vector3d(0.0,  0.0,  0.0));
-    //this->marker_word_pos.emplace(3,Eigen::Vector3d(0.0,  0.121,  0.0));
-    //this->marker_word_pos.emplace(1,Eigen::Vector3d(0.195,  0.121,  0.05));
-    //this->marker_word_pos.emplace(2,Eigen::Vector3d(0.195,  0.0,  0.0));
-    this->marker_word_pos =  CctagFileHelper::TagWorldLocationFromFile(std::filesystem::path("tag_world_pos.txt"));
-    
+    this->marker_word_pos =  CctagFileHelper::TagWorldLocationFromFile(std::filesystem::path("tag_world_pos.txt"));    
 }
 
 
@@ -32,6 +26,7 @@ void Col2Plane::withPrecalulated(std::string file){
     //this->printTagInfos();
 }
 
+//use cctag to find markers
 void Col2Plane::calcCctag(){
 
     std::filesystem::path path("photodir/malli");
@@ -125,9 +120,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             for(const auto& trans: colmap_transforms){
                 if( tagI.image_name == trans.filename){
                     tmp.camera_info = trans;
+                    image_infos.push_back(tmp);
                     break;
                 }
-            image_infos.push_back(tmp);
             }
         }
         //calc ray dirs
@@ -148,7 +143,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         // just a hack for a while.
         //select tag to solve for, use 3 images for now
-        int tag_to_use = 1;
+        int tag_to_use = 0;
         std::vector<tag_col_dir> use_for_solve;
         std::copy_if(image_infos.begin(), image_infos.end(), std::back_inserter(use_for_solve), 
              [tag_to_use](const tag_col_dir& entry){
@@ -169,9 +164,32 @@ void Col2Plane::col2CctSpace(solve_mode mode){
                   return a.tag_info.image_name == b.tag_info.image_name;
               }), use_for_solve.end());
         std::cout << "before using lm solve we have "  << use_for_solve.size()  << " possible imgs with tag " << tag_to_use << "\n";
+        std::cout <<"first in" << image_infos[0].camera_info.filename << "\n";
 
 
+        // going to solve with 3 cams for now. 
 
+        //functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
+        std::vector<Eigen::Vector3d> cams; 
+        std::vector<Eigen::Vector3d> ray_dirs;
+        Eigen::Vector3d world_pos;
+        int cams_to_use = 5;
+        int tag_id = 0  ;
+        assert(use_for_solve.size() > cams_to_use );
+        for(int i = 0 ; i< cams_to_use;i++){
+            cams.push_back(use_for_solve[i].camera_info.translation);
+            //purkka
+            for(int j = 0; j< use_for_solve[i].tag_info.ids.size();j++){
+                if ( use_for_solve[i].tag_info.ids[j] == tag_to_use){
+                    Eigen::Vector3d tmp(use_for_solve[i].tag_info.coordinates[j].first, use_for_solve[i].tag_info.coordinates[j].second, 0.0); 
+                    ray_dirs.push_back(tmp);
+                    break;
+                }
+            }
+            world_pos = marker_word_pos.find(tag_to_use)->second;
+        }
+
+        lmDriver(cams,ray_dirs,world_pos);
 
     }break;
     default:

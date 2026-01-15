@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <eigen3/unsupported/Eigen/NonLinearOptimization>
+#include <unsupported/Eigen/NumericalDiff>
 
 /*
 s = colmap mallin koordinaatisto
@@ -31,7 +32,8 @@ public:
               const Eigen::Vector3d& X_target) 
          : cam_c(cam_c), 
            ray_dir(ray_dir), 
-           X_target(X_target){
+           X_target(X_target),
+           n_cams_(cam_c.size()){
             //TODO:: ASSERT NÄMÄ VIDDU
             assert (cam_c.size() == ray_dir.size()); // all cameras need to have ray_dir
            }
@@ -42,8 +44,8 @@ public:
         
         Eigen::Vector3d angle_ax = params.segment<3>(0);
         Eigen::Vector3d trans    = params.segment<3>(3);
-        Eigen::Vector3d scales   = params.segment<3>(6);
-
+        Eigen::VectorXd scales   = params.segment(6, n_cams_);
+        
         Eigen::AngleAxisd R_aa(angle_ax.norm(), angle_ax.normalized());                
         Eigen::Matrix3d ROT = R_aa.toRotationMatrix();
         
@@ -62,9 +64,17 @@ public:
         // 3. residuals = predictions - X_target
         return 0;
     }
-    
-    int inputs() const { return 9; }  // ALWAYS 9 for your problem
-    int values() const { return 9; }  // ALWAYS 9
+
+
+      typedef double Scalar;
+    enum { InputsAtCompileTime = Eigen::Dynamic, ValuesAtCompileTime = Eigen::Dynamic };
+    typedef Eigen::Matrix<Scalar, InputsAtCompileTime, 1> InputType;
+    typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, 1> ValueType;
+    typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, InputsAtCompileTime> JacobianType;
+
+    int inputs() const { return 6 + n_cams_; }  // ALWAYS 9 for your problem
+    int values() const { return 3 * n_cams_; }  // 3 residuals per camera
+    //int values() const { return 9; }  // ALWAYS 9
     
 private:
     std::vector<Eigen::Vector3d> cam_c;  // Camera centers
@@ -73,15 +83,35 @@ private:
     int n_cams_;
 };
 
-void lmDriver(){
+void lmDriver( std::vector<Eigen::Vector3d> cams, 
+                std::vector<Eigen::Vector3d> ray_dirs,
+                Eigen::Vector3d world_pos){
     
-    /*functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
-    cams  =suoraan colmap kamerat ja niiden lokaatiot.
-    ray_dirs = camera_rotation⁻1 *  normalize() K⁻1 * {u,v,1}^T )
-    */
+    //std::cout << "lm driver has these cam centrums \n";
+    //for(const auto& cam: cams){
+    //    std::cout << cam << "\n \n";}
 
-    //MyFunctor functor();
-    //Eigen::LevenbergMarquardt<MyFunctor> solver(functor);
+
+    MyFunctor functor(cams,ray_dirs,world_pos);
+    Eigen::NumericalDiff<MyFunctor> numDiff(functor);
+    Eigen::LevenbergMarquardt<Eigen::NumericalDiff<MyFunctor>, double> solver(numDiff);
+
+
+
+    //solver.maxIterations = 1000;
+    solver.iter = 100000;
+    Eigen::VectorXd params(6 +cams.size());
+    params << 0.0, 0.0, 0.0,  // Rotation vector (identity initially)
+              2.0, 3.0, 4.0,  // Translation
+              Eigen::VectorXd::Ones(cams.size());
+
+    std::cout << params.segment<3>(3) <<"\n";
+    solver.minimize(params);
+    std::cout << " after solve" "\n";
+    std::cout << params.segment<3>(3)   << "\n";
+    std::cout <<" depths"  << params.segment<3>(0)   << "\n";
+    
+
     // solverin parametrit vakoile= https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 }
 

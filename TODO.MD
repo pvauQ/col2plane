@@ -42,7 +42,7 @@ with ccTag we want to do different modes, use opencv for now
     --tag locations for images are outputed to tags.txt and then that file can be used. 
     .. just give that file as argument.
 [] figure out if it's usefull to have cctag as lib in the proces
-    .. cctag is only required for finding tags.  so probably usfull to have own executable for it.  
+    .. cctag is only required for finding tags.  so probably usful to have own executable for it.  
 
 [] make a script that automates all this!
 
