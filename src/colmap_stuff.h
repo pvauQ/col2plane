@@ -8,6 +8,7 @@
 struct cameraParams{
     Eigen::Matrix4d k; //intrincts
     Eigen::Vector4d distortion;
+    cameraParams() = default;
     cameraParams(Eigen::Matrix4d k, Eigen::Vector4d d) : k(k), distortion(d) {};
 };
 

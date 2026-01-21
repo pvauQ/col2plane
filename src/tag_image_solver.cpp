@@ -83,6 +83,7 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
     //std::cout<<trans_out[0] <<"\n" << translations[0]<< " \n";
 
     std::vector<matrixTransform> trans;
+
     for(size_t i = 0; i < solutions; ++i) {
         matrixTransform kissa;
         kissa.error = reperr[i];

@@ -72,9 +72,8 @@ public:
     typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, 1> ValueType;
     typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, InputsAtCompileTime> JacobianType;
 
-    int inputs() const { return 6 + n_cams_; }  // ALWAYS 9 for your problem
-    int values() const { return 3 * n_cams_; }  // 3 residuals per camera
-    //int values() const { return 9; }  // ALWAYS 9
+    int inputs() const { return 6 + n_cams_; }
+    int values() const { return 3 * n_cams_; }
     
 private:
     std::vector<Eigen::Vector3d> cam_c;  // Camera centers
@@ -83,7 +82,7 @@ private:
     int n_cams_;
 };
 
-void lmDriver( std::vector<Eigen::Vector3d> cams, 
+ Eigen::VectorXd lmDriver( std::vector<Eigen::Vector3d> cams, 
                 std::vector<Eigen::Vector3d> ray_dirs,
                 Eigen::Vector3d world_pos){
     
@@ -99,19 +98,20 @@ void lmDriver( std::vector<Eigen::Vector3d> cams,
 
 
     //solver.maxIterations = 1000;
-    solver.iter = 100000;
+    solver.iter = 1000;
     Eigen::VectorXd params(6 +cams.size());
     params << 0.0, 0.0, 0.0,  // Rotation vector (identity initially)
               2.0, 3.0, 4.0,  // Translation
               Eigen::VectorXd::Ones(cams.size());
 
-    std::cout << params.segment<3>(3) <<"\n";
+    //std::cout << params.segment<3>(3) <<"\n";
     solver.minimize(params);
-    std::cout << " after solve" "\n";
-    std::cout << params.segment<3>(3)   << "\n";
-    std::cout <<" depths"  << params.segment<3>(0)   << "\n";
-    
+    //std::cout << " after solve" "\n";
+    //std::cout <<" trans"  << params.segment<3>(3)   << "\n";
+    //std::cout <<" rots"  << params.segment<3>(0)   << "\n";
+    //std::cout <<" depths"  << params.segment(6, cams.size())   << "\n";
 
+    return params;
     // solverin parametrit vakoile= https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 }
 

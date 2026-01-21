@@ -1,5 +1,6 @@
 WHEN HAVING PROBLEMS. CHECK THAT CCTAG  generates correct output!! it's broken on  ubuntu 24.04...
 
+THINK ABOUT NEED TO UNDISTORT IN SOME STEPS?
 
 
 start wih colmap model
@@ -32,6 +33,7 @@ with ccTag we want to do different modes, use opencv for now
     ->triangulate from known tag locations to camera.
     <-  point must be vissible from  least 3 cams. more cams more better.
     ...do this for multiple points to estabilish a scale.
+    [] add undistrotion to required places..
 
 [] 2 tags use homography and circle ellipse property to calculate plane. and locations for orientation
 
