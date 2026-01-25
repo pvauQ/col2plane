@@ -222,7 +222,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
 
 
-        ///triangulate use 3 cams. fuck.
+        ///triangulate use 3 cams.
         assert(use_for_scale.size() >= 3);
         std::vector<Eigen::Matrix<double, 3, 4>> projections;
         std::vector<Eigen::Vector2d> image_points;
@@ -291,6 +291,11 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         float dist_in_s_frame = (point0 - loc_s_space).norm();
         float scene_scale = dist_in_world_frame / dist_in_s_frame;
         std::cout << "scale modifier should be " << scene_scale << "\n";
+
+        //transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale)
+         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
+        transToFile(q_rot,trans, scene_scale);
+
     
 
 
@@ -350,7 +355,7 @@ void Col2Plane::cameraPosOutput(std::vector<matrixTransform>& transforms){
 }
 
 // variant for calculating and outputting the transform that takes colmap model to world coords..
-void transformOutput(){};
+void Col2Plane::transformOutput(){};
 
 
 
@@ -372,4 +377,5 @@ Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform cam
     tmp = CAM_ROT * tmp;
 
     return tmp.normalized();
+    
 }

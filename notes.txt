@@ -1,6 +1,13 @@
 build cctag with cuda
 be mindfull there is lot of depricated stuff.. ( in cctag)
 
+colmap model_transformer, huomio input formaatti
+https://github.com/colmap/colmap/issues/3339
+The matrix.txt file is expected to contain scale qw qx qy qz tx ty tz and not the 4x4 transformation matrix. See Sim3d::FromFile.
+
+
+camera = frame = image jne,,
+
 
 colmap cordinate system:
 x,              y,          z

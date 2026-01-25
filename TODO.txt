@@ -1,4 +1,7 @@
 WHEN HAVING PROBLEMS. CHECK THAT CCTAG  generates correct output!! it's broken on  ubuntu 24.04...
+https://github.com/alicevision/CCTag/issues/219
+https://github.com/alicevision/CCTag/issues/226
+
 
 THINK ABOUT NEED TO UNDISTORT IN SOME STEPS?
 

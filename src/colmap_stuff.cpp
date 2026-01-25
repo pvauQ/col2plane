@@ -79,7 +79,7 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
 
 //The matrix.txt file is expected to contain scale qw qx qy qz tx ty tz and not the 4x4 transformation matrix. See Sim3d::FromFile.
 // this is  the format expected by colmap model_transformer
-void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::string name_prefix){
+void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale){
     std::string file =  name_prefix + "transformation.txt";
     std::ofstream out_stream(file);
 
@@ -88,7 +88,7 @@ void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::stri
     }
     out_stream << std::setprecision(std::numeric_limits<double>::digits10 + 2);
 
-    out_stream << 1 << " " 
+    out_stream << scale << " " 
                << rotation.w() << " " 
                << rotation.x() << " " 
                << rotation.y() << " " 
@@ -96,6 +96,7 @@ void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , std::stri
                << trans[0]    << " " 
                << trans[1]    << " " 
                << trans[2]    << "\n "; 
+    std::cout << "wrote transform to file \n" << scale << "\n" << rotation << "\n" << translation << "\n";
 }
 
 // to produce output for colmap model_aligner;
