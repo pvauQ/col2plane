@@ -20,3 +20,9 @@ opencv käyttää samaa p3p
 // things asumed
 
 only one camera for scene ( intrincts, extrincts) 19.12.2025
+
+
+"Ideal point coordinates" from OpenCV's undistortPoints = Normalized Device Coordinates (NDC) in OpenGL. 27.1
+https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html
+
+häviääkö meiltä joku tägi jossain kohtaa

@@ -13,6 +13,11 @@ enum solve_mode {
   LM_SOLVE,
   ELLIPSE_SOLVE
 }; 
+struct tag_col_dir
+{
+    CctagFileHelper::tagInfo tag_info;
+    transform camera_info;
+};
 
 class Col2Plane
 {
@@ -37,6 +42,8 @@ class Col2Plane
     Eigen::Vector3d  calculateCameraRay(double x,  double y, transform camera);
     std::vector<transform> colmap_transforms;  
     cameraParams colmap_cam_params;
+
+    void CollectCamRays(std::vector<Eigen::Vector3d> & cams, std::vector<Eigen::Vector3d> & ray_dirs, std::vector<tag_col_dir> use_for_solve, int tag_to_use);
 
 };
 std::vector<matrixTransform> FilterBestN(std::vector<matrixTransform>   i_transforms , size_t num_out);

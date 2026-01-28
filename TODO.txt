@@ -4,6 +4,11 @@ https://github.com/alicevision/CCTag/issues/226
 
 
 THINK ABOUT NEED TO UNDISTORT IN SOME STEPS?
+-- probably, but difrences can be really small . not main source of error 
+    -  for pikku_pöytä dataset less than 1 pixel for  some
+
+
+think about cordinate systems for rotations, are they  cam_to_world or world_to_cam
 
 
 start wih colmap model
@@ -36,7 +41,8 @@ with ccTag we want to do different modes, use opencv for now
     ->triangulate from known tag locations to camera.
     <-  point must be vissible from  least 3 cams. more cams more better.
     ...do this for multiple points to estabilish a scale.
-    [] add undistrotion to required places..
+    [x] add undistrotion to required places..
+    need to select best cameras to use in triangulation..
 
 [] 2 tags use homography and circle ellipse property to calculate plane. and locations for orientation
 
