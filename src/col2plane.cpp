@@ -22,7 +22,8 @@ Col2Plane::Col2Plane(){
     std::filesystem::path path("photodir/malli");
     std::filesystem::path model_path  =path ;
     // colmapin tuottamat kamerat ja näiden transformit    
-    colmap_transforms =  getCameraTranforms(model_path);
+    //colmap_transforms =  getCameraTranforms(model_path);
+    colmap_transforms =  getAvgreprojError(model_path); // this gives transforms that have the error in there :)
     colmap_cam_params = getCameraParameters(model_path);
 
 }
@@ -104,6 +105,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         int tag_to_use = 0; // lm solve using this
         int tag_to_scale =1; // scale using this after we have solution
+        int n_cams_to_use = 5; //  how many cameras used; these must see the marker
 
         
         /*functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
@@ -112,7 +114,10 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         */
         // halutaan siis n kameraa jotka näkee markkerin x, ja tämä erikseen muutamalla markkerille.
         
-
+        std::sort(colmap_transforms.begin(), colmap_transforms.end(), 
+          [](const transform& a, const transform& b) {
+              return a.error < b.error;
+          });
 
         std::vector<tag_col_dir> image_infos ;
         for(const auto& tagI: img_tags){
@@ -184,14 +189,14 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         std::vector<Eigen::Vector3d> cams1 , cams2; 
         std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2;
-        CollectCamRays(cams1,ray_dirs1,use_for_solve,tag_to_use);
-        CollectCamRays(cams2,ray_dirs2,use_for_scale,tag_to_scale);
+        CollectCamRays(cams1,ray_dirs1,use_for_solve,tag_to_use,n_cams_to_use);
+        CollectCamRays(cams2,ray_dirs2,use_for_scale,tag_to_scale,n_cams_to_use);
 
         std::vector<Eigen::Vector3d> world_positions;
         world_positions.push_back(marker_word_pos.find(tag_to_use)->second); // these fill the given vectors.
         world_positions.push_back(marker_word_pos.find(tag_to_scale)->second);
         
-        Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams1,ray_dirs1,  world_positions); // SOLUTION 
+        Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2,  world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
@@ -389,18 +394,20 @@ Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform cam
 void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams, 
                                 std::vector<Eigen::Vector3d> & ray_dirs, 
                                 std::vector<tag_col_dir> use_for_solve , 
-                                int tag_to_use){
+                                int tag_to_use,
+                                int n_cams_to_use){
 
     //functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
 
-    int cams_to_use = 10;
-    std::cout << use_for_solve.size() <<  "with tag " << tag_to_use << "\n";
-    assert(use_for_solve.size() > cams_to_use );
+    std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
+    std::cout << "error for " << n_cams_to_use << ". element " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
+    assert(use_for_solve.size() > n_cams_to_use );
     
-    for(int i = 0 ; i< cams_to_use;i++){
+    for(int i = 0 ; i< n_cams_to_use;i++){
         
         //NEED TO LEARN ABOUT CAMERA STUFF SOME MORE, 
-        Eigen::Vector3d c = -(use_for_solve[i].camera_info.rot.toRotationMatrix().transpose()) * use_for_solve[i].camera_info.translation;
+        // this 
+        Eigen::Vector3d c = (-use_for_solve[i].camera_info.rot.toRotationMatrix().transpose()) * use_for_solve[i].camera_info.translation;
         
         //cams.push_back(use_for_solve[i].camera_info.translation);
         cams.push_back(c);

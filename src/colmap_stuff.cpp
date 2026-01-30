@@ -73,7 +73,7 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
         distortion << k1, k2, k3, k4;
         break;
     }
-    std::cout << "intrinsics:\n " << K << "\n";
+    //std::cout << "intrinsics:\n " << K << "\n";
     //std::cout << "distortion:\n " << distortion << "\n";
     return cameraParams(K,distortion);
 }
@@ -87,7 +87,7 @@ void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float sca
     if (!out_stream.is_open()) {
         throw std::runtime_error("Failed to open " + file);
     }
-    out_stream << std::setprecision(std::numeric_limits<double>::digits10 + 2);
+    out_stream << std::setprecision(std::numeric_limits<double>::digits10);
 
     out_stream << scale << " " 
                << rotation.w() << " " 
@@ -118,3 +118,128 @@ void camerasTofile(std::vector<matrixTransform> cameras){
 
 }
 
+
+
+/// calculates per image reprojection error for colmap model, 
+/// outputs transforms that have point data embedded in.
+/// @param colmap_model_dir 
+std::vector<transform> getAvgreprojError(std::filesystem::path colmap_model_dir){
+
+    std::vector<transform> transforms; // kameran pose
+    std::map<int,Eigen::Vector3d> points3d;
+
+    // stuff from img. points  in 2d and their cords
+    std::string file = "images.txt";
+    std::ifstream input_stream(colmap_model_dir / file );
+    if (!input_stream.is_open()) {
+        throw std::runtime_error("Failed to open " + file);
+    }
+    std::string in_str;
+    while (getline(input_stream,in_str )) {
+        if (in_str.front() == '#'){
+            continue;
+        }
+        //# Image list with two lines of data per image:
+        //#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME
+        //#   POINTS2D[] as (X, Y, POINT3D_ID)
+ 
+        std::stringstream st(in_str);
+        int f_id;
+        double QW, QX, QY, QZ;
+        double TX, TY, TZ;
+        int c_id;
+        std::string f_name;
+        st >> 
+        f_id >> QW >> QX>> QY>> QZ>> TX>> TY>> TZ >> c_id >> f_name;
+
+
+        getline(input_stream,in_str);  // this line has the points
+        std::stringstream points_st(in_str);
+        std::map<int,Eigen::Vector2d> point_2d_coords;
+
+        double x, y;
+        int point_id;
+        // Fixed: Proper loop - read triplets until fail
+        while (points_st >> x >> y >> point_id) {
+            point_2d_coords.emplace(point_id, Eigen::Vector2d(x, y));
+        }
+        transform trans(f_id, f_name ,Eigen::Quaterniond(QW,QX,QY,QZ),Eigen::Vector3d(TX,TY,TZ));
+        trans.point_2d_coords =point_2d_coords;
+        transforms.push_back(trans);
+    }
+    // 3d points.
+    //#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)
+    file = "points3D.txt";
+    input_stream.close();
+    input_stream.open(colmap_model_dir / file );
+    if (!input_stream.is_open()) {
+        throw std::runtime_error("Failed to open " + file);
+    }
+
+    while (getline(input_stream,in_str )) {
+        if (in_str.front() == '#'){
+            continue;
+        }
+        std::stringstream st(in_str);
+        int id;
+        double x,y,z,r,g,b,error;
+        double img_id, id_2d;
+        st >> id>>x>>y>>z>>r>>g>>b>>error; // loput rivistä ei kiinosta.
+        Eigen::Vector3d loc(x,y,z);
+        points3d.emplace(id,loc);
+    }
+    input_stream.close();
+
+    cameraParams params  = getCameraParameters(colmap_model_dir);
+    Eigen::Vector4d dist = params.distortion;
+
+    // elikkä reprojektaa piste 3d - > 2d katso kuinka suuri virhe saatiin aikaiseksi
+
+    for( auto& trans: transforms){ // kaikki kamera<t käydään läpi not const koska kirjoi
+        Eigen::Matrix3d ROT = trans.rot.toRotationMatrix();
+        Eigen::Vector3d t = trans.translation;
+        float total_error = 0;
+
+        int num_projections = 0;
+        for(const auto& point2d :trans.point_2d_coords){
+            auto it = points3d.find(point2d.first);
+            if(it ==points3d.end()){
+                continue;
+            }
+
+            num_projections++;
+            Eigen::Vector3d world_3d_p = it->second;
+            //World → Camera coordinates
+            Eigen::Vector3d c_point  = ROT * world_3d_p + t;
+            //Perspective division (normalized camera coords)
+            double x_n, y_n;
+            x_n = c_point.x()/c_point.z();
+            y_n = c_point.y()/c_point.z();
+            // distotation formula / thanks ai
+            double r2 = x_n*x_n + y_n*y_n;
+            double r4 = r2 * r2;
+            double radial = 1 + dist[0]*r2 + dist[1]*r4 + 0*r4*r2;
+            double dx = 2*dist[2]*x_n*y_n + dist[3]*(r2 + 2*x_n*x_n);  // p1 ✓
+            double dy = dist[2]*(r2 + 2*y_n*y_n) + 2*dist[3]*x_n*y_n;
+            double x_distorted = x_n * radial + dx;
+            double y_distorted = y_n * radial + dy;
+
+            //Pixel coordinates
+            Eigen::Vector3d distorted_hom(x_distorted, y_distorted, 1.0); //homogenious
+            Eigen::Vector3d point2d_projected = params.k.block<3,3>(0,0) * distorted_hom; 
+
+            //cartesian cords
+            double w = point2d_projected.z();
+            Eigen::Vector2d pred(point2d_projected.x()/w, point2d_projected.y()/w);
+            Eigen::Vector2d actual = point2d.second;
+            float error = (actual - pred).norm();
+            total_error += error;
+        }
+        float avg_error = total_error/num_projections;
+        trans.error = avg_error;
+        //std::cout << " reproj error for " << trans.filename <<" " <<  avg_error << "\n";         
+    }
+    return transforms;
+
+
+}

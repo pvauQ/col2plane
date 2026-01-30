@@ -10,6 +10,8 @@ struct transform{
     std::string filename; // when used for camera
     Eigen::Quaterniond rot;
     Eigen::Vector3d translation;
+    double error;
+    std::map<int, Eigen::Vector2d> point_2d_coords; // id of point and it's 2d location in this.
     transform()=default;
     transform(Eigen::Quaterniond q, Eigen::Vector3d t)  : rot(q), translation(t) {}
     transform(int id ,Eigen::Quaterniond q, Eigen::Vector3d t)  :id(id), rot(q), translation(t) {}

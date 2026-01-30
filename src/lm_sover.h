@@ -41,7 +41,7 @@ public:
     typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, 1> ValueType;
     typedef Eigen::Matrix<Scalar, ValuesAtCompileTime, InputsAtCompileTime> JacobianType;
 
-    int inputs() const { return 6 + n_cams_; }
+    int inputs() const { return 6 + n_cams_ - 1; }
     int values() const { return 3 * n_cams_; }
 
 
@@ -84,16 +84,16 @@ public:
             pred0 =ROT* cams1[i] + trans + scales[i]* ROT * ray_dirs1[i];
             pred1 =ROT* cams2[i] + trans + scales[i+ cams1.size()]* ROT * ray_dirs2[i];
             
-            //if (i == 0){
-            //    pred0 =ROT* cams1[i] + trans + 1.0* ROT * ray_dirs1[i];
-            //}
+            if (i == 0){
+                pred0 =ROT* cams1[i] + trans + 1.0* ROT * ray_dirs1[i];
+            }
         
             residuals.segment<3>(i * 6 + 0) = pred0 - X_targets[0];
             residuals.segment<3>(i * 6 + 3) = pred1 - X_targets[1];
 
         }
-        
-        std::cout << " error: "<<  sqrt(residuals.squaredNorm() / residuals.size()) << "\n";
+        //std::cout << residuals.transpose()<< "\n";
+        //std::cout << " error: "<<  sqrt(residuals.squaredNorm() / residuals.size()) << "\n";
         // 1. Decode params → R,t,;
         // 2. Compute predictions R*C_i + t + s_i*R*d_i
         // 3. residuals = predictions - X_target
@@ -138,16 +138,16 @@ public:
               Eigen::VectorXd::Ones(total_cams);
     params.segment<1>(6).setConstant(1.0); 
 
-    Eigen::AngleAxisd init_rot(35.0 * M_PI/180.0, Eigen::Vector3d(0,1,0)); // just something initially
+    Eigen::AngleAxisd init_rot(35.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
     params.segment<3>(0) = init_rot.axis() * init_rot.angle();
     
     solver.minimize(params);
 
-    std::cout << params.segment<3>(3) <<"\n";
-    std::cout << " after solve" "\n";
-    std::cout <<" rots"  << params.segment<3>(0)   << "\n";
-    std::cout <<" trans"  << params.segment<3>(3)   << "\n";
-    std::cout <<" depths"  << params.segment(6, total_cams)  << "\n";
+    //std::cout << params.segment<3>(3) <<"\n";
+    //std::cout << " after solve" "\n";
+    //std::cout <<" rots"  << params.segment<3>(0)   << "\n";
+    //std::cout <<" trans"  << params.segment<3>(3)   << "\n";
+    //std::cout <<" depths"  << params.segment(6, total_cams)  << "\n";
 
     return params;
     // https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm

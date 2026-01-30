@@ -43,7 +43,7 @@ class Col2Plane
     std::vector<transform> colmap_transforms;  
     cameraParams colmap_cam_params;
 
-    void CollectCamRays(std::vector<Eigen::Vector3d> & cams, std::vector<Eigen::Vector3d> & ray_dirs, std::vector<tag_col_dir> use_for_solve, int tag_to_use);
+    void CollectCamRays(std::vector<Eigen::Vector3d> & cams, std::vector<Eigen::Vector3d> & ray_dirs, std::vector<tag_col_dir> use_for_solve, int tag_to_use, int n_cams_to_use);
 
 };
 std::vector<matrixTransform> FilterBestN(std::vector<matrixTransform>   i_transforms , size_t num_out);
