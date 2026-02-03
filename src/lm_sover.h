@@ -102,6 +102,7 @@ public:
             residuals.segment<3>(i * 9 + 0) = pred0 - X_targets[0];
             residuals.segment<3>(i * 9 + 3) = pred1 - X_targets[1];
             residuals.segment<3>(i * 9 + 6) = pred2 - X_targets[2];
+            
 
         }
         //std::cout << residuals.transpose()<< "\n";
@@ -133,10 +134,19 @@ public:
     Eigen::NumericalDiff<MyFunctor> numDiff(functor);
     Eigen::LevenbergMarquardt<Eigen::NumericalDiff<MyFunctor>, double> solver(numDiff);
 
-    solver.parameters.ftol = 1e-4;     
-    solver.parameters.xtol = 1e-6;      
+
+    // ai asetukset 
+    solver.parameters.ftol     = 1e-12;    // Function tolerance
+    solver.parameters.xtol     = 1e-12;    // Parameter tolerance
+    solver.parameters.gtol     = 1e-8;     // Gradient tolerance (UNCOMMENT THIS)
+    solver.parameters.epsfcn   = 1e-12;    // Finite diff precision
+    solver.parameters.maxfev   = 10000;    // Max function evals
+    solver.parameters.factor   = 1e-8;
+
+    //solver.parameters.ftol = 1e-4;     
+    //solver.parameters.xtol = 1e-6;      
     //solver.parameters.gtol = 1e-4;
-    solver.parameters.maxfev = 1000; 
+    //solver.parameters.maxfev = 1000; 
     
     int total_cams = cams1.size() + cams2.size() + cams3.size();
     Eigen::Vector3d is = (cams1[0]+cams1[1]+ cams1[2]) / 3.0; // something to use as initial
