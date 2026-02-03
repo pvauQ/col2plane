@@ -105,7 +105,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         int tag_to_use = 0; // lm solve using this
         int tag_to_scale =1; // scale using this after we have solution
-        int n_cams_to_use = 5; //  how many cameras used; these must see the marker
+        int tag_to_extra = 2;
+        int n_cams_to_use = 8; //  how many cameras used; these must see the marker
 
         
         /*functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
@@ -132,84 +133,53 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             }
         }
 
-        // let's make two vectors, for solving and for scaling
-
-        std::vector<tag_col_dir> use_for_solve;
-        std::vector<tag_col_dir> use_for_scale;
-        std::copy_if(image_infos.begin(), image_infos.end(), std::back_inserter(use_for_solve), 
-             [tag_to_use](const tag_col_dir& entry){
-                auto it = std::find(entry.tag_info.ids.begin(), entry.tag_info.ids.end(), tag_to_use);
-                if( it !=  entry.tag_info.ids.end()){
-                    return true;
-                }else{
-                    return false;
-                }
-             });
-        
-        std::sort(use_for_solve.begin(), use_for_solve.end(),
-              [](const tag_col_dir& a, const tag_col_dir& b) {
-                  return a.tag_info.image_name < b.tag_info.image_name;
-              });
-        use_for_solve.erase(std::unique(use_for_solve.begin(), use_for_solve.end(),
-              [](const tag_col_dir& a, const tag_col_dir& b) {
-                  return a.tag_info.image_name == b.tag_info.image_name;
-              }), use_for_solve.end());
-        std::cout << "we have "  << use_for_solve.size()  << " possible imgs with tag " << tag_to_use << "\n";
-        std::cout <<"first" << image_infos[0].camera_info.filename << "\n";
-
-        //scale---------------------------------
-        std::copy_if(image_infos.begin(), image_infos.end(), std::back_inserter(use_for_scale), 
-        [tag_to_scale](const tag_col_dir& entry){
-        auto it = std::find(entry.tag_info.ids.begin(), entry.tag_info.ids.end(), tag_to_scale);
-        if( it !=  entry.tag_info.ids.end()){
-            return true;
-        }else{
-            return false;
-        }
-        });
-
-        std::sort(use_for_scale.begin(), use_for_scale.end(),
-              [](const tag_col_dir& a, const tag_col_dir& b) {
-                  return a.tag_info.image_name < b.tag_info.image_name;
-              });
-        use_for_scale.erase(std::unique(use_for_scale.begin(), use_for_scale.end(),
-              [](const tag_col_dir& a, const tag_col_dir& b) {
-                  return a.tag_info.image_name == b.tag_info.image_name;
-              }), use_for_scale.end());
-        std::cout << "we have "  << use_for_scale.size()  << " possible imgs with tag " << tag_to_scale << "\n";
-        std::cout <<"first" << image_infos[0].camera_info.filename << "\n";
+        std::vector<tag_col_dir> use_for_solve = filterAndSortByTag(image_infos, tag_to_use);
+        std::vector<tag_col_dir> use_for_scale = filterAndSortByTag(image_infos, tag_to_scale);
+        std::vector<tag_col_dir> use_for_3 = filterAndSortByTag(image_infos, tag_to_extra);
 
     //------------------------------------ solve part
     ///////////////////////////////////////////////
 
     /////////////////////////////////////////////
+
         
 
 
 
-        std::vector<Eigen::Vector3d> cams1 , cams2; 
-        std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2;
+        std::vector<Eigen::Vector3d> cams1 , cams2, cams3; 
+        std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2, ray_dirs3;
         CollectCamRays(cams1,ray_dirs1,use_for_solve,tag_to_use,n_cams_to_use);
         CollectCamRays(cams2,ray_dirs2,use_for_scale,tag_to_scale,n_cams_to_use);
+        CollectCamRays(cams3,ray_dirs3,use_for_3,tag_to_extra,n_cams_to_use);
+
+        // Test coplanarity of exactly 4 cams1 cameras
+        Eigen::Vector3d p0 = cams1[0], p1 = cams1[1], p2 = cams1[2], p3 = cams1[3];
+        Eigen::Vector3d v1 = p1 - p0;
+        Eigen::Vector3d v2 = p2 - p0;
+        Eigen::Vector3d plane_normal = v1.cross(v2).normalized();
+
+        Eigen::Vector3d test_vec = p3 - p0;
+        double dotprod = test_vec.dot(plane_normal);
+        std::cout << "cams1[0-3] planarity ( dot prod): " << dotprod  << "\n";
+
 
         std::vector<Eigen::Vector3d> world_positions;
         world_positions.push_back(marker_word_pos.find(tag_to_use)->second); // these fill the given vectors.
         world_positions.push_back(marker_word_pos.find(tag_to_scale)->second);
+        world_positions.push_back(marker_word_pos.find(tag_to_extra)->second);
         
-        Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2,  world_positions); // SOLUTION 
+        Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2, cams3,ray_dirs3,  world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
+        //std::cout << "rotation outside of solver"  << rot_angle_axis << "\n";
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
 
-        std::cout << " solver gave rotation (euler angles): \n " << ROT.eulerAngles(0, 1, 2) *  180.0/M_PI  << " DEG \n";
+        //std::cout << " solver gave rotation (euler angles): \n " << ROT.eulerAngles(0, 1, 2) *  180.0/M_PI  << " DEG \n";
 
         //transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale)
         
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
         transToFile(q_rot,trans, 1);
-
-
-
 
         /*
         // estabilish scale part
@@ -317,7 +287,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     }
 
     
-    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,1.5);
+    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,10.5);
     cameraPosOutput(filtered_cams);
     return;
 
@@ -381,6 +351,7 @@ Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform cam
     std::vector<cv::Point2d> src_points = {cv::Point2d(x, y)};
     std::vector<cv::Point2d> undistorted_points;
 
+
     cv::undistortPoints(src_points, undistorted_points, k_mat, distortion_mat);
     cv::Point2d undistorted = undistorted_points[0];
 
@@ -408,7 +379,7 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
         //NEED TO LEARN ABOUT CAMERA STUFF SOME MORE, 
         // this 
         Eigen::Vector3d c = (-use_for_solve[i].camera_info.rot.toRotationMatrix().transpose()) * use_for_solve[i].camera_info.translation;
-        
+        //Eigen::Vector3d c = use_for_solve[i].camera_info.translation;
         //cams.push_back(use_for_solve[i].camera_info.translation);
         cams.push_back(c);
         //purkka
@@ -417,10 +388,41 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
                 double x = use_for_solve[i].tag_info.coordinates[j].first;
                 double y = use_for_solve[i].tag_info.coordinates[j].second;
                 //std::cout << "calculating  ray dir for "  << x << " "<< y << " " << use_for_solve[i].camera_info.filename << " to " << tag_to_use << "\n";
-                ray_dirs.push_back( calculateCameraRay(x, y, use_for_solve[i].camera_info));
+                ray_dirs.push_back( calculateCameraRay(x, y, use_for_solve[i].camera_info).normalized());
                 //std::cout << "ray_dir dot products: " << ray_dirs[0].dot(ray_dirs.back()) << std::endl;    
                 break;
             }
         }
     } 
  }
+
+ std::vector<tag_col_dir> Col2Plane::filterAndSortByTag(const std::vector<tag_col_dir>& image_infos, int tag_id) {
+    std::vector<tag_col_dir> result;
+    // ne joissa on täg = täg_id
+    std::copy_if(image_infos.begin(), image_infos.end(), std::back_inserter(result), 
+         [tag_id](const tag_col_dir& entry) {
+            auto it = std::find(entry.tag_info.ids.begin(), entry.tag_info.ids.end(), tag_id);
+            return it != entry.tag_info.ids.end();
+         });
+    // sort by name jotta voidaan delete unituq
+    std::sort(result.begin(), result.end(),
+          [](const tag_col_dir& a, const tag_col_dir& b) {
+              return a.tag_info.image_name < b.tag_info.image_name;
+          });
+    result.erase(std::unique(result.begin(), result.end(),
+          [](const tag_col_dir& a, const tag_col_dir& b) {
+              return a.tag_info.image_name == b.tag_info.image_name;
+          }), result.end());
+    
+    std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id << "\n";
+    if (!image_infos.empty()) {
+        std::cout << "first " << image_infos[0].camera_info.filename << " "  << image_infos[0].camera_info.error <<  "\n";
+    }
+    //lasty sort by error
+    std::sort(result.begin(), result.end(),
+        [](const tag_col_dir& a, const tag_col_dir& b) {
+            return a.camera_info.error < b.camera_info.error;
+        });
+
+    return result;
+}
