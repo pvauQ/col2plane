@@ -158,16 +158,13 @@ public:
 
     Eigen::AngleAxisd init_rot(90.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
     params.segment<3>(0) = init_rot.axis() * init_rot.angle();
-    for(auto& ray : ray_dirs3) {
-        std::cout << ray.norm();
-    }
 
 
     int ret = solver.minimize(params);
 
     Eigen::VectorXd final_res;
     functor(params, final_res);
-    std::cout << "Status: " << ret << ", RMSE: " << sqrt(final_res.squaredNorm()/final_res.size()) << "\n";
+    std::cout << "LM solver got " << ", RMSE: " << sqrt(final_res.squaredNorm()/final_res.size()) << "\n";
 
 
     //std::cout << params.segment<3>(3) <<"\n";

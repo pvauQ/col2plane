@@ -62,7 +62,8 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
         int id,  width, height;
         double fx, fy, cx, cy, k1, k2, k3, k4;
         st >> id >> model >> width >> height >> fx >> fy >> cx >> cy >> k1 >> k2 >> k3 >> k4;
-        std::cout << model;
+        std::cout << model << " camera model used in colmap \n";
+        if(model != "OPENCV") std::cerr << "whole thing might be broken for other than OPENCV models, proceed with care \n";
         assert(model == "OPENCV"); // paremeters in file are different for different models.
         
         K << fx, 0, cx, 0,
@@ -80,8 +81,10 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
 
 //The matrix.txt file is expected to contain scale qw qx qy qz tx ty tz and not the 4x4 transformation matrix. See Sim3d::FromFile.
 // this is  the format expected by colmap model_transformer
-void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale){
-    std::string file =  "transformation.txt";
+//NOTE: colmap model_transformer applies rotation and trans and then scales. this will cause origo to drifit
+// to combat this run it twice, first with only the scale part
+void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale, std::string file){
+    //std::string file =  "transformation.txt";
     std::ofstream out_stream(file);
 
     if (!out_stream.is_open()) {
@@ -97,7 +100,7 @@ void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float sca
                << trans[0]    << " " 
                << trans[1]    << " " 
                << trans[2]    << "\n "; 
-    std::cout << "wrote transform to file \n"  << scale << "\n" << rotation << "\n" << trans << "\n";
+    std::cout << "wrote transform to file  " << file <<   "\n"  << scale << "\n" << rotation << "\n" << trans.transpose() << "\n";
 }
 
 // to produce output for colmap model_aligner;

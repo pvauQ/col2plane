@@ -3,6 +3,8 @@ https://github.com/alicevision/CCTag/issues/219
 https://github.com/alicevision/CCTag/issues/226
 
 
+
+
 THINK ABOUT NEED TO UNDISTORT IN SOME STEPS?
 -- probably, but difrences can be really small . not main source of error 
     -  for pikku_pöytä dataset less than 1 pixel for  some
@@ -12,12 +14,11 @@ think about cordinate systems for rotations, are they  cam_to_world or world_to_
 
 
 start wih colmap model
-1 - [] sort colmap images by lovest error
+1 - [x] sort colmap images by lovest error
 n - [x] find cctags from images 
 3 - [x] calculate p3p for n best image tag pairs (location of camera)
 4 - [] calculate difrence between colmap image location and one we calulate 
-5 - [] store this is in transforms.txt as S quat trans
-    -broken.
+5 - [x] store this is in transforms.txt as S quat trans
 6 - [] 
 7 - [x] model_aligner vs model_transformer
     -- model aligner on kiva ja hauska, koska ei tarvitse itse selvittää skaalaa.
@@ -37,7 +38,7 @@ with ccTag we want to do different modes, use opencv for now
 [] 3 tags use pnp multiple images to  take care of ambiquity
 [x] 3 tags  with ambiquity p3p
 
-[] any number of tags, using colmap cameras, and lm solver.
+[x] any number of tags, using colmap cameras, and lm solver.
     ->triangulate from known tag locations to camera.
     <-  point must be vissible from  least 3 cams. more cams more better.
     ...do this for multiple points to estabilish a scale.
@@ -56,8 +57,12 @@ with ccTag we want to do different modes, use opencv for now
     .. cctag is only required for finding tags.  so probably usful to have own executable for it.  
 
 [] make a script that automates all this!
-
-
 for all math convert to eigen as soon as possible. (opencv things look cursed)
 
 LONGS FOR IDS EVERYWHERE
+
+----- software usability section-----------------
+[] select markers to use based on what markers are visible in the scene and are defined in tag_world_pos.txt
+[] save all files related to model in directory of that model
+[] make nice arg parse to select operation mode.
+[] lisää  bash skriptiin kansion teko

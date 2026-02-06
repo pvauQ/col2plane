@@ -21,7 +21,7 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir);
 
 
 
-void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale);
+void transToFile(Eigen::Quaterniond rotation, Eigen::Vector3d trans, float scale, std::string file);
 void camerasTofile(std::vector<transform> cameras);
 void camerasTofile(std::vector<matrixTransform> cameras);
 

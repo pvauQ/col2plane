@@ -104,8 +104,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     case:: solve_mode::LM_SOLVE:{
 
         int tag_to_use = 0; // lm solve using this
-        int tag_to_scale =1; // scale using this after we have solution
-        int tag_to_extra = 2;
+        int tag_to_scale =2; // scale using this after we have solution
+        int tag_to_extra = 3;
         int n_cams_to_use = 8; //  how many cameras used; these must see the marker
 
         
@@ -152,7 +152,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         CollectCamRays(cams2,ray_dirs2,use_for_scale,tag_to_scale,n_cams_to_use);
         CollectCamRays(cams3,ray_dirs3,use_for_3,tag_to_extra,n_cams_to_use);
 
-        // Test coplanarity of exactly 4 cams1 cameras
+        //shity test for some coplanarity, if this is something that actually causes problems TODO:proper tests
         Eigen::Vector3d p0 = cams1[0], p1 = cams1[1], p2 = cams1[2], p3 = cams1[3];
         Eigen::Vector3d v1 = p1 - p0;
         Eigen::Vector3d v2 = p2 - p0;
@@ -171,6 +171,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2, cams3,ray_dirs3,  world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
+        
+        Eigen::VectorXd ray_depths = solution.segment(6, n_cams_to_use * 3 ); // first all rays for cam1(1,2,3) cam2 camd3
+        std::cout << " \n" << ray_depths.size()<< "\n";
         //std::cout << "rotation outside of solver"  << rot_angle_axis << "\n";
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
 
@@ -178,108 +181,31 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         //transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale)
         
+        //Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
+        //transToFile(q_rot,trans, 1);
+
+        
+        // establish scale part---------------------------------------------------------
+        // we need to know distance between pair of markers in world frame and in s frame
+        // given those scale is just ratio between those markers?? 
+        double world_distance =(marker_word_pos.find(tag_to_use)->second - marker_word_pos.find(tag_to_scale)->second).norm();
+        // cam_c + ray_dir * ray_scale = target in s frame 
+        Eigen::Vector3d tag_1_s = cams1[0] + ray_dirs1[0] *ray_depths[0];
+        Eigen::Vector3d tag_2_s = cams2[0] + ray_dirs2[0] *ray_depths[n_cams_to_use];
+        double s_frame_distance = (tag_1_s - tag_2_s).norm();
+        double scale = world_distance / s_frame_distance;
+        std::cout << "distance of pair " << tag_to_use << " " << tag_to_scale << " in \n"\
+                    << "s frame " << s_frame_distance << "\n" \
+                    << "w frame " << world_distance << "\n" \
+                    << "gives ratio " << scale << "\n";
+
+        //scale = scale * scale;  //  mie en ymmärrä miksi näin, mutta tää antaa oikean skaalan :D
+
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
-        transToFile(q_rot,trans, 1);
-
-        /*
-        // estabilish scale part
-
-        // 1. Undistort imagepoints
-        // 2. camera lokaatiot esitettävä oikein
-        // 3.triangulate ( )
+        transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, "scale_trans.txt");
+        transToFile(q_rot,trans, 1, "transform.txt");
+     
         
-        ///triangulate use 3 cams. //TODO:MAKE loop nicer..
-        assert(use_for_scale.size() >= 3);
-        std::vector<Eigen::Matrix<double, 3, 4>> projections;
-        std::vector<Eigen::Vector2d> image_points;
-
-        for(int i  = 0; i<3; i++){
-            Eigen::Matrix<double, 3, 4> tmp;
-
-
-            tmp.block<3,3>(0,0) = use_for_scale[i].camera_info.rot.toRotationMatrix(); // should this be inverse no?
-            tmp.col(3) = use_for_scale[i].camera_info.translation;
-            tmp = colmap_cam_params.k.block<3,3>(0,0) * tmp;
-            projections.push_back(tmp);
-
-            //get tag coordinates
-            for(int j =0 ; j< use_for_scale[i].tag_info.ids.size(); j++ ){
-                if(use_for_scale[i].tag_info.ids[j] == tag_to_scale){
-                    int id  = use_for_scale[i].tag_info.ids[j];
-                    image_points.emplace_back(use_for_scale[i].tag_info.coordinates[j].first, use_for_scale[i].tag_info.coordinates[j].second);
-                    break;
-                }
-            }
-        }
-        // undistort  points that we are going to use,
-        std::vector<cv::Mat> undistorted_im_points;
-        for(auto& ip : image_points){
-            cv::Mat k_mat(3, 3, CV_64F);           // 3x3 double for K matrix
-            cv::Mat distortion_mat(1, 5, CV_64F);  // Row vector for 5 distortion coeffs (common for COLMAP/FULL_OPENCV)
-            Eigen::Matrix3d k_block = colmap_cam_params.k.block<3,3>(0,0);
-            cv::eigen2cv(k_block, k_mat);
-            cv::eigen2cv(colmap_cam_params.distortion, distortion_mat);
-            // we use  only one point, but function expecpts vec/multiple points;
-            std::vector<cv::Point2d> src_points = {cv::Point2d(ip.x(), ip.y())};
-            std::vector<cv::Point2d> undistorted_points;
-
-            cv::undistortPoints(src_points, undistorted_points, k_mat, distortion_mat);
-            cv::perspectiveTransform(undistorted_points, undistorted_points, k_mat); // what the fuck
-            cv::Mat undistorted(2,1, CV_64F);
-            undistorted.at<double>(0,0) = undistorted_points[0].x;
-            undistorted.at<double>(1,0) = undistorted_points[0].y;
-            
-            //cv::Mat undistorted(undistorted_points[0].x, undistorted_points[0].y;
-            undistorted_im_points.push_back(undistorted);
-        }
-
-
-        cv::Mat P1, P2, P3, x1, x2, x3;
-        Eigen::Matrix<double, 3, 4> proj0 = projections[0];
-        Eigen::Matrix<double, 3, 4> proj1 = projections[1];
-        Eigen::Matrix<double, 3, 4> proj2 = projections[2];
-        cv::eigen2cv(proj0, P1);
-        cv::eigen2cv(proj1, P2);
-        cv::eigen2cv(proj2, P3);
-
-        cv::Mat out4d1,out4d2,out4d3 ;
-        cv::triangulatePoints(P1,P2,undistorted_im_points[0],undistorted_im_points[1],out4d1); 
-        cv::triangulatePoints(P1,P3,undistorted_im_points[0],undistorted_im_points[2],out4d2);
-        cv::triangulatePoints(P2,P3,undistorted_im_points[1],undistorted_im_points[2],out4d3);
-        // output from triangulate is in homogenious cordinates
-
-        // jump back to eigen
-        Eigen::Vector4d out4d1_eigen, out4d2_eigen, out4d3_eigen;
-        cv::cv2eigen(out4d1, out4d1_eigen);
-        cv::cv2eigen(out4d2, out4d2_eigen);
-        cv::cv2eigen(out4d3, out4d3_eigen);
-        // back to cartesian coordinates
-        Eigen::Vector3d out_3d1 = out4d1_eigen.head<3>() / out4d1_eigen[3];
-        Eigen::Vector3d out_3d2 = out4d2_eigen.head<3>() / out4d2_eigen[3]; 
-        Eigen::Vector3d out_3d3 = out4d3_eigen.head<3>() / out4d3_eigen[3];
-        Eigen::Vector3d loc_s_space = (out_3d1 + out_3d2 + out_3d3) / 3.0; // avg
-
-        // care, some nice metrics to do some fuckkery
-        std::cout << " via triangulation we got location for tag " << tag_to_scale << " in s space\n" << loc_s_space << "\n" ;
-        
-        // skaalan selvitys
-        float dist_in_world_frame =  (marker_word_pos.find(tag_to_use)->second  - marker_word_pos.find(tag_to_scale)->second).norm();
-        
-        //std::cout << " trans in here"<< trans << "\n";
-        Eigen::Vector3d point0 = ROT.transpose() * (marker_word_pos.find(tag_to_use)->second - trans);
-        float dist_in_s_frame = (point0 - loc_s_space).norm();
-        std::cout << " tag " << tag_to_use << "  in s space\n" << point0 << "\n" ;
-        
-        std::cout << "distance of tag pair  in world " << tag_to_use << " " << tag_to_scale << " is " << dist_in_world_frame <<"\n";
-        std::cout << "distance of tag pair in S " << tag_to_use << " " << tag_to_scale << " is " <<  dist_in_s_frame <<"\n";
-
-        float scene_scale = dist_in_world_frame / dist_in_s_frame;
-        std::cout << "scale modifier should be " << scene_scale << "\n";
-
-        //transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale)
-        Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
-        transToFile(q_rot,trans, scene_scale);
-        */
     }break;
     default:
         std::cout << "not enough tags found \n";
@@ -287,7 +213,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     }
 
     
-    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,10.5);
+    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,5.5);
     cameraPosOutput(filtered_cams);
     return;
 
@@ -371,7 +297,7 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
     //functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
 
     std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
-    std::cout << "error for " << n_cams_to_use << ". element " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
+    std::cout << "reprojection error ( colmap) for " << n_cams_to_use << ". cam " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
     assert(use_for_solve.size() > n_cams_to_use );
     
     for(int i = 0 ; i< n_cams_to_use;i++){
@@ -414,15 +340,17 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
               return a.tag_info.image_name == b.tag_info.image_name;
           }), result.end());
     
-    std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id << "\n";
-    if (!image_infos.empty()) {
-        std::cout << "first " << image_infos[0].camera_info.filename << " "  << image_infos[0].camera_info.error <<  "\n";
-    }
+
     //lasty sort by error
     std::sort(result.begin(), result.end(),
         [](const tag_col_dir& a, const tag_col_dir& b) {
             return a.camera_info.error < b.camera_info.error;
         });
+
+    std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id << "\n";
+    if (!result.empty()) {
+        std::cout << " first " << result[0].camera_info.filename << "  with error: "  << result[0].camera_info.error <<  "\n";
+    }
 
     return result;
 }
