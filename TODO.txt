@@ -45,6 +45,9 @@ with ccTag we want to do different modes, use opencv for now
     [x] add undistrotion to required places..
     need to select best cameras to use in triangulation..
 
+[] when doing scaling it's important 
+
+
 [] 2 tags use homography and circle ellipse property to calculate plane. and locations for orientation
 
 [] single tag, use homography to estabilish a a plane.

@@ -5,30 +5,50 @@
 
 int main(int argc, char* argv[])
 {
-    std::cout << "You have entered " << argc
-         << " arguments:" << std::endl;
 
-    std::string tag_txt = "";
-    // Using a while loop to iterate through arguments
-    int i = 0;
-    while (i < argc) {
-        std:: cout << "Argument " << i  << ": " << argv[i]
-             << std:: endl;
-        
-        if (i ==  1){
-            tag_txt = argv[i];
-        }
-        i++;
+    std::map<std::string, std::string> param_value;
+
+    if ( argc > 1 && std::string(argv[1]) == "--help"){
+        std::cout <<
+        " --solve_mode  p3p lm  . defaults to p3p \n"     
+        //" --model_dir *  . n\n"
+        " --cctag_from_file   .give a file path \n"
+        " -- help \n";
+        return 0;
     }
-    // ajetaanko cctag vai käytetäänkö tallennettuja.
+    for(int i = 1; i < argc - 1; i += 2){
+        std::string param,value;
+        param = argv[i];
+        value = argv[i+1];
+        param_value.emplace(param,value);    
+    }
+
     Col2Plane instance;
-    if (tag_txt != ""){
-        instance.withPrecalulated(tag_txt);
+
+    // cctag_from_file
+    auto it = param_value.find("--cctag_from_file");
+    if (it != param_value.end()) {
+        instance.withPrecalulated(it->second);
+        it->second;
     }
     else{
         instance.calcCctag();
     }
-    instance.col2CctSpace(solve_mode::LM_SOLVE);
+    
+    solve_mode mode(solve_mode::LM_SOLVE);
+    it = param_value.find("--solve_mode");
+        if (it != param_value.end()) {
+            if (it->second == "p3p")
+                mode = solve_mode::P3P_SOLVE;
+            else if (it->second == "lm")
+                mode = solve_mode::LM_SOLVE;
+            else if (it->second == "ellipse"){
+                std::cout << "not implemented";
+                return 0;
+            }
+            
+        }
+    instance.col2CctSpace(mode);
 
     return 0;
 }

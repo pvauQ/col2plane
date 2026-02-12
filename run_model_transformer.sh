@@ -4,7 +4,7 @@ cp transform.txt ./photodir/malli/transform.txt
 cp scale_trans.txt ./photodir/malli/scale_trans.txt
 
 # Navigate to transform directory
-cd ./photodir/malli/
+cd ./photodir/malli/dense_model
 
 
 colmap model_transformer --input_path . --output_path ./transformed --transform_path transform.txt --is_inverse 0
