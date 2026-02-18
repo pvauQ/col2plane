@@ -96,11 +96,6 @@ std::vector<matrixTransform> solve3Tags1Img(std::vector<Eigen::Vector3d> &world_
 
 
 
-
-
-
-
-
 // n tag version, this returns only one solution.
 matrixTransform solveNTags1Img(std::vector<Eigen::Vector3d> &world_cords, std::vector<Eigen::Vector3d> &image_points,
                          Eigen::Matrix4d &intrinsics , Eigen::Vector4d &distorion)
@@ -169,10 +164,7 @@ matrixTransform solveNTags1Img(std::vector<Eigen::Vector3d> &world_cords, std::v
 
 
 
-
-
-
-
+// this is rep error tag 3d point back to imagepoints on images
 std::vector<double> calcReProjError( std::vector<cv::Point3d> objectPoints, std::vector<cv::Point2d> imagePoints,
                         std::vector<cv::Mat> rvec, std::vector<cv::Mat> tvec,
                         cv::Mat cameraMatrix, cv::Mat distCoeffs)

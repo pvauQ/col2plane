@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 
     if ( argc > 1 && std::string(argv[1]) == "--help"){
         std::cout <<
-        " --solve_mode  p3p lm  . defaults to p3p \n"     
+        " --solve_mode  p3p lm  . defaults to lm \n"     
         //" --model_dir *  . n\n"
         " --cctag_from_file   .give a file path \n"
         " -- help \n";

@@ -21,30 +21,25 @@ Col2Plane::Col2Plane(){
     
     std::filesystem::path path("photodir/malli");
     std::filesystem::path model_path  =path ;
-    // colmapin tuottamat kamerat ja näiden transformit    
-    //colmap_transforms =  getCameraTranforms(model_path);
     colmap_transforms =  getAvgreprojError(model_path); // this gives transforms that have the error in there :)
     colmap_cam_params = getCameraParameters(model_path);
 
 }
 
-
 // cctag output previously saved to a file
 void Col2Plane::withPrecalulated(std::string file){
     std::filesystem::path p = std::filesystem::current_path();
     img_tags = CctagFileHelper::readTagsFromtxt(p/file);
-    //this->printTagInfos();
 }
 
 //use cctag to find markers
 void Col2Plane::calcCctag(){
-
     std::filesystem::path path("photodir/malli");
     std::filesystem::path model_path  =path ;
     img_tags = CctagFileHelper::readTagsFromImages(path);
     //this->printTagInfos();
-
 }
+
 void Col2Plane::printTagInfos(){
     for( auto& tag : img_tags){
         std::cout << tag.image_name << " with: " <<  tag.ids.size() << " tags \n";
@@ -53,12 +48,10 @@ void Col2Plane::printTagInfos(){
         }
         std::cout << std::endl;
     }
-
 }
 
 
 void Col2Plane::col2CctSpace(solve_mode mode){
-
     std::vector<CctagFileHelper::tagInfo>  ims_to_use;
     std::vector<matrixTransform> tag_based_cam_trans;
     //CctagFileHelper::tagInfo im;
@@ -89,27 +82,22 @@ void Col2Plane::col2CctSpace(solve_mode mode){
                 tmp.derived_location = tmp.rotation * tmp.location; //matrix * translation
                 tag_based_cam_trans.push_back(tmp);
             }
-            /*
-            matrixTransform output =  solveNTags1Img(world_pos, image_pos,colmap_cam_params.k, colmap_cam_params.distortion);
-            if(output.location != Eigen::Vector3d(0.0,0.0,0.0)){
-                output.filename = im.image_name;
-                output.derived_location = output.rotation * output.location; //mat*vec
-                std::cout << output.derived_location << "\n";
-                tag_based_cam_trans.push_back(output);
-            }*/
         }
+            //this filtering  uses reprojection error of pnp solve -> it's different than colmap reperror!!
+            std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,5.5);
+            cameraPosOutput(filtered_cams);
     }break;
 
 
     case:: solve_mode::LM_SOLVE:{
-
+        //TODO:  automaattinen valinta, ja tai arg parserilta valitaan tägit
         int tag_to_use = 0; // lm solve using this
         int tag_to_scale =2; // scale using this after we have solution
         int tag_to_extra = 3;
         int n_cams_to_use = 8; //  how many cameras used; these must see the marker
 
         
-        /*functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
+        /*solveri tarvitsee cams,  ray_dirs, X_target ( world pos) 
         cams  =suoraan colmap kamerat ja niiden lokaatiot.
         ray_dirs = camera_rotation⁻1 *  normalize() K⁻1 * {u,v,1}^T )
         */
@@ -119,8 +107,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
           [](const transform& a, const transform& b) {
               return a.error < b.error;
           });
-
         std::vector<tag_col_dir> image_infos ;
+        //tägit kuvissa
         for(const auto& tagI: img_tags){
             tag_col_dir tmp; 
             tmp.tag_info =tagI;
@@ -138,14 +126,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         std::vector<tag_col_dir> use_for_3 = filterAndSortByTag(image_infos, tag_to_extra);
 
     //------------------------------------ solve part
-    ///////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////
-
-        
-
-
-
+    
         std::vector<Eigen::Vector3d> cams1 , cams2, cams3; 
         std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2, ray_dirs3;
         CollectCamRays(cams1,ray_dirs1,use_for_solve,tag_to_use,n_cams_to_use);
@@ -157,12 +140,12 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         Eigen::Vector3d v1 = p1 - p0;
         Eigen::Vector3d v2 = p2 - p0;
         Eigen::Vector3d plane_normal = v1.cross(v2).normalized();
-
         Eigen::Vector3d test_vec = p3 - p0;
         double dotprod = test_vec.dot(plane_normal);
         std::cout << "cams1[0-3] planarity ( dot prod): " << dotprod  << "\n";
 
-
+        
+        // tag world pos
         std::vector<Eigen::Vector3d> world_positions;
         world_positions.push_back(marker_word_pos.find(tag_to_use)->second); // these fill the given vectors.
         world_positions.push_back(marker_word_pos.find(tag_to_scale)->second);
@@ -171,21 +154,14 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2, cams3,ray_dirs3,  world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
-        
         Eigen::VectorXd ray_depths = solution.segment(6, n_cams_to_use * 3 ); // first all rays for cam1(1,2,3) cam2 camd3
-        std::cout << " \n" << ray_depths.size()<< "\n";
+
+        //std::cout << " \n" << ray_depths.size()<< "\n";
         //std::cout << "rotation outside of solver"  << rot_angle_axis << "\n";
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
-
-        //std::cout << " solver gave rotation (euler angles): \n " << ROT.eulerAngles(0, 1, 2) *  180.0/M_PI  << " DEG \n";
-
-        //transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale)
-        
-        //Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
-        //transToFile(q_rot,trans, 1);
-
         
         // establish scale part---------------------------------------------------------
+
         // we need to know distance between pair of markers in world frame and in s frame
         // given those scale is just ratio between those markers?? 
         double world_distance =(marker_word_pos.find(tag_to_use)->second - marker_word_pos.find(tag_to_scale)->second).norm();
@@ -199,8 +175,6 @@ void Col2Plane::col2CctSpace(solve_mode mode){
                     << "w frame " << world_distance << "\n" \
                     << "gives ratio " << scale << "\n";
 
-        //scale = scale * scale;  //  mie en ymmärrä miksi näin, mutta tää antaa oikean skaalan :D
-
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
         transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, "scale_trans.txt");
         transToFile(q_rot,trans, 1, "transform.txt");
@@ -211,15 +185,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         std::cout << "not enough tags found \n";
         break;
     }
-
-    
-    std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,5.5);
-    cameraPosOutput(filtered_cams);
     return;
-
 }
-
-
 
 
 std::vector<matrixTransform> FilterByError(std::vector<matrixTransform> &  i_transforms , double max_error){
@@ -264,9 +231,9 @@ void Col2Plane::cameraPosOutput(std::vector<matrixTransform>& transforms){
 //void Col2Plane::transformOutput(){};
 
 
-
-Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform camera){
-    
+//calc one ray based on x,y  coordinates camera rotation.
+//uses camera instrinsics and distortion from col2plane
+Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform camera){    
         // this is  to undistort via opencv
     cv::Mat k_mat(3, 3, CV_64F);           // 3x3 double for K matrix
     cv::Mat distortion_mat(1, 5, CV_64F);  // Row vector for 5 distortion coeffs (common for COLMAP/FULL_OPENCV)
@@ -287,14 +254,15 @@ Eigen::Vector3d Col2Plane::calculateCameraRay(double x,  double y, transform cam
     return tmp.normalized();
     
 }
-// give in empty vectors will build into those.
+
+// calc  ray directions based on cam tag pairs.
+// builds results to vectors of 3 vectors. (cam locations, ray directions.)
 void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams, 
                                 std::vector<Eigen::Vector3d> & ray_dirs, 
                                 std::vector<tag_col_dir> use_for_solve , 
                                 int tag_to_use,
                                 int n_cams_to_use){
 
-    //functori tarvitsee cams,  ray_dirs, X_target ( world pos) 
 
     std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
     std::cout << "reprojection error ( colmap) for " << n_cams_to_use << ". cam " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
@@ -302,13 +270,8 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
     
     for(int i = 0 ; i< n_cams_to_use;i++){
         
-        //NEED TO LEARN ABOUT CAMERA STUFF SOME MORE, 
-        // this 
         Eigen::Vector3d c = (-use_for_solve[i].camera_info.rot.toRotationMatrix().transpose()) * use_for_solve[i].camera_info.translation;
-        //Eigen::Vector3d c = use_for_solve[i].camera_info.translation;
-        //cams.push_back(use_for_solve[i].camera_info.translation);
         cams.push_back(c);
-        //purkka
         for(int j = 0; j< use_for_solve[i].tag_info.ids.size();j++){
             if ( use_for_solve[i].tag_info.ids[j] == tag_to_use){
                 double x = use_for_solve[i].tag_info.coordinates[j].first;
@@ -322,6 +285,8 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
     } 
  }
 
+// filter so we have only tag_col_dirs that have tag defined by tag id
+// results are sorted by colmap reproj error
  std::vector<tag_col_dir> Col2Plane::filterAndSortByTag(const std::vector<tag_col_dir>& image_infos, int tag_id) {
     std::vector<tag_col_dir> result;
     // ne joissa on täg = täg_id

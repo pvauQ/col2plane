@@ -8,7 +8,7 @@
 #1 0.195 0.121 0.05
 #2 0.195 0.0 0.0
 
-# "metrin lankku a4 markkerit"
+# "metrin lankku markkerit"
 0 -0.429 0 0
 2  0      0 0
 3  0.520  0 0

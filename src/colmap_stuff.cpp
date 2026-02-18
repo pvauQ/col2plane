@@ -125,6 +125,7 @@ void camerasTofile(std::vector<matrixTransform> cameras){
 
 /// calculates per image reprojection error for colmap model, 
 /// outputs transforms that have point data embedded in.
+// this is essentialy smae as getCameraParameters but now we calculate reprojection errros
 /// @param colmap_model_dir 
 std::vector<transform> getAvgreprojError(std::filesystem::path colmap_model_dir){
 
@@ -198,7 +199,7 @@ std::vector<transform> getAvgreprojError(std::filesystem::path colmap_model_dir)
 
     // elikkä reprojektaa piste 3d - > 2d katso kuinka suuri virhe saatiin aikaiseksi
 
-    for( auto& trans: transforms){ // kaikki kamera<t käydään läpi not const koska kirjoi
+    for( auto& trans: transforms){ // kaikki kamera<t käydään läpi
         Eigen::Matrix3d ROT = trans.rot.toRotationMatrix();
         Eigen::Vector3d t = trans.translation;
         float total_error = 0;

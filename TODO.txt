@@ -3,21 +3,12 @@ https://github.com/alicevision/CCTag/issues/219
 https://github.com/alicevision/CCTag/issues/226
 
 
-
-
-THINK ABOUT NEED TO UNDISTORT IN SOME STEPS?
--- probably, but difrences can be really small . not main source of error 
-    -  for pikku_pöytä dataset less than 1 pixel for  some
-
-
 think about cordinate systems for rotations, are they  cam_to_world or world_to_cam
-
-
 start wih colmap model
 1 - [x] sort colmap images by lovest error
 n - [x] find cctags from images 
 3 - [x] calculate p3p for n best image tag pairs (location of camera)
-4 - [] calculate difrence between colmap image location and one we calulate 
+4 - [x] calculate difrence between colmap image location and one we calulate 
 5 - [x] store this is in transforms.txt as S quat trans
 6 - [] 
 7 - [x] model_aligner vs model_transformer
@@ -26,9 +17,10 @@ n - [x] find cctags from images
 https://colmap.github.io/faq.html#geo-registration
 model_aligner: Align/geo-register model to coordinate system of given camera centers.
     - Geo register using calculated camera cordinates. this need multiple frames to be calculated
+
 model_transformer: Transform coordinate frame of a model.
-    - Give 
-https://colmap.github.io/cli.html
+    - this takes in scale,quaternion,translatipon
+    https://colmap.github.io/cli.html
 
 
 with ccTag we want to do different modes, use opencv for now
@@ -45,13 +37,10 @@ with ccTag we want to do different modes, use opencv for now
     [x] add undistrotion to required places..
     need to select best cameras to use in triangulation..
 
-[] when doing scaling it's important 
 
 
 [] 2 tags use homography and circle ellipse property to calculate plane. and locations for orientation
-
-[] single tag, use homography to estabilish a a plane.
-
+[] single tag, use homography to establish a a plane.
 
 [x] figure out how to make cctag have actual outputfile, so i dont need to parse, or use as lib
     --tag locations for images are outputed to tags.txt and then that file can be used. 
@@ -61,11 +50,16 @@ with ccTag we want to do different modes, use opencv for now
 
 [] make a script that automates all this!
 for all math convert to eigen as soon as possible. (opencv things look cursed)
-
-LONGS FOR IDS EVERYWHERE
+LONGS FOR IDS EVERYWHERE??
 
 ----- software usability section-----------------
 [] select markers to use based on what markers are visible in the scene and are defined in tag_world_pos.txt
 [] save all files related to model in directory of that model
-[] make nice arg parse to select operation mode.
+[x] make nice arg parse to select operation mode.
 [] lisää  bash skriptiin kansion teko
+
+---- improve accuracy of alignment
+[] balance between number of cameras vs. errors
+[] what is actual min number of  tag camera rays such that  Lm solver still converges
+[] is using 2 tags enough?
+[] if using 3 tags is colinerity a problem?

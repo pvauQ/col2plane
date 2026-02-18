@@ -13,6 +13,8 @@ enum solve_mode {
   LM_SOLVE,
   ELLIPSE_SOLVE
 }; 
+
+//pair that has info of the tag and camera that sees it
 struct tag_col_dir
 {
     CctagFileHelper::tagInfo tag_info;
