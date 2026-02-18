@@ -16,10 +16,10 @@ Least 3 tags in the scene;  each tag has to bee seen least from 3 cameras, but n
 6. run col2plane, specify model to use, output of cctag step is saved to tags.txt and this can be used to skip calculating cctags on following runs.
 7. software generates output files that can be used to transform colmap scene.
 
-## files generated or used
+### files generated or used
 tag_world_pos.txt -> specify world locations of tags you are using line starting # is a comment
 example:
-# one per line: "id x y z"
+ one per line: "id x y z"
 0 -0.429 0 0
 2  0      0 0
 3  0.520  0 0
@@ -27,7 +27,7 @@ example:
 tags.txt
 Results from cctag marker detection are stored here.
 example:
-# one image per line: "filename x y id x y id"....
+ one image per line: "filename x y id x y id"....
 _MG_0965.JPG 1279.26000977 2357.82519531 2 3398.65429688 2137.80200195 3 
 
 transform.txt
