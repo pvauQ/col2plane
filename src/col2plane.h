@@ -30,6 +30,7 @@ class Col2Plane
     void withPrecalulated(std::string file);
     void calcCctag();
 
+    std::map<int,int>tagsVisibleInImages();
     void printTagInfos();
 
     void cameraPosOutput(std::vector<matrixTransform>& trans );
@@ -37,6 +38,7 @@ class Col2Plane
     void col2CctSpace(solve_mode mode);
     void kissa();
 
+    int number_of_images_lm = 3;
     std::vector<CctagFileHelper::tagInfo> img_tags;
     std::map<int,Eigen::Vector3d> marker_word_pos;
 

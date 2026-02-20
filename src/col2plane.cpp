@@ -50,6 +50,24 @@ void Col2Plane::printTagInfos(){
     }
 }
 
+//get to see what tags are visible in how many images
+// returns id and in how many images it is
+std::map<int,int> Col2Plane::tagsVisibleInImages(){
+    std::map<int,int> tag_in_images;
+    //we trust that no duplicates exist
+    for (const auto& tag : img_tags){
+        for (const int id : tag.ids){
+            tag_in_images[id]++;
+        }
+    }
+    // decending sort
+    std::vector<std::pair<int,int>> sorted_tags(tag_in_images.begin(), tag_in_images.end());
+    std::sort(sorted_tags.rbegin(), sorted_tags.rend(), 
+          [](const auto& a, const auto& b){ return a.second < b.second; });
+    return tag_in_images;
+
+}
+
 
 void Col2Plane::col2CctSpace(solve_mode mode){
     std::vector<CctagFileHelper::tagInfo>  ims_to_use;
@@ -89,12 +107,25 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     }break;
 
 
+
+
+
+
     case:: solve_mode::LM_SOLVE:{
         //TODO:  automaattinen valinta, ja tai arg parserilta valitaan tägit
-        int tag_to_use = 0; // lm solve using this
-        int tag_to_scale =2; // scale using this after we have solution
-        int tag_to_extra = 3;
-        int n_cams_to_use = 8; //  how many cameras used; these must see the marker
+        int n_cams_to_use = this->number_of_images_lm; //  how many cameras are used per marker 
+
+        int tags_to_use[3];
+        int iter = 0;
+        std::map<int,int> num_tags = tagsVisibleInImages();
+        for (const auto& t : num_tags){
+            assert(marker_word_pos.find(t.first) != marker_word_pos.end()); //täg found but not in tags_to_use.txt
+            tags_to_use[iter] = t.first;
+            iter++;
+            if (iter >3) 
+                break;
+        }
+
 
         
         /*solveri tarvitsee cams,  ray_dirs, X_target ( world pos) 
@@ -121,9 +152,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             }
         }
 
-        std::vector<tag_col_dir> use_for_solve = filterAndSortByTag(image_infos, tag_to_use);
-        std::vector<tag_col_dir> use_for_scale = filterAndSortByTag(image_infos, tag_to_scale);
-        std::vector<tag_col_dir> use_for_3 = filterAndSortByTag(image_infos, tag_to_extra);
+        std::vector<tag_col_dir> use_for_solve = filterAndSortByTag(image_infos, tags_to_use[0]);
+        std::vector<tag_col_dir> use_for_scale = filterAndSortByTag(image_infos, tags_to_use[1]);
+        std::vector<tag_col_dir> use_for_3 = filterAndSortByTag(image_infos, tags_to_use[2]);
 
     //------------------------------------ solve part
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -131,9 +162,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     
         std::vector<Eigen::Vector3d> cams1 , cams2, cams3; 
         std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2, ray_dirs3;
-        CollectCamRays(cams1,ray_dirs1,use_for_solve,tag_to_use,n_cams_to_use);
-        CollectCamRays(cams2,ray_dirs2,use_for_scale,tag_to_scale,n_cams_to_use);
-        CollectCamRays(cams3,ray_dirs3,use_for_3,tag_to_extra,n_cams_to_use);
+        CollectCamRays(cams1,ray_dirs1,use_for_solve,tags_to_use[0],n_cams_to_use);
+        CollectCamRays(cams2,ray_dirs2,use_for_scale,tags_to_use[1],n_cams_to_use);
+        CollectCamRays(cams3,ray_dirs3,use_for_3,    tags_to_use[2],n_cams_to_use);
 
         //shity test for some coplanarity, if this is something that actually causes problems TODO:proper tests
         Eigen::Vector3d p0 = cams1[0], p1 = cams1[1], p2 = cams1[2], p3 = cams1[3];
@@ -147,9 +178,9 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         
         // tag world pos
         std::vector<Eigen::Vector3d> world_positions;
-        world_positions.push_back(marker_word_pos.find(tag_to_use)->second); // these fill the given vectors.
-        world_positions.push_back(marker_word_pos.find(tag_to_scale)->second);
-        world_positions.push_back(marker_word_pos.find(tag_to_extra)->second);
+        world_positions.push_back(marker_word_pos.find(tags_to_use[0])->second); // these fill the given vectors.
+        world_positions.push_back(marker_word_pos.find(tags_to_use[1])->second);
+        world_positions.push_back(marker_word_pos.find(tags_to_use[2])->second);
         
         Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2, cams3,ray_dirs3,  world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
@@ -164,16 +195,16 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
         // we need to know distance between pair of markers in world frame and in s frame
         // given those scale is just ratio between those markers?? 
-        double world_distance =(marker_word_pos.find(tag_to_use)->second - marker_word_pos.find(tag_to_scale)->second).norm();
+        double world_distance =(marker_word_pos.find(tags_to_use[0])->second - marker_word_pos.find(tags_to_use[1])->second).norm();
         // cam_c + ray_dir * ray_scale = target in s frame 
         Eigen::Vector3d tag_1_s = cams1[0] + ray_dirs1[0] *ray_depths[0];
         Eigen::Vector3d tag_2_s = cams2[0] + ray_dirs2[0] *ray_depths[n_cams_to_use];
         double s_frame_distance = (tag_1_s - tag_2_s).norm();
         double scale = world_distance / s_frame_distance;
-        std::cout << "distance of pair " << tag_to_use << " " << tag_to_scale << " in \n"\
-                    << "s frame " << s_frame_distance << "\n" \
-                    << "w frame " << world_distance << "\n" \
-                    << "gives ratio " << scale << "\n";
+        //std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
+        //            << "s frame " << s_frame_distance << "\n" \
+        //            << "w frame " << world_distance << "\n" \
+        //            << "gives ratio " << scale << "\n";
 
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
         transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, "scale_trans.txt");
@@ -295,7 +326,7 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
             auto it = std::find(entry.tag_info.ids.begin(), entry.tag_info.ids.end(), tag_id);
             return it != entry.tag_info.ids.end();
          });
-    // sort by name jotta voidaan delete unituq
+    // sort by name jotta voidaan delete unituqfilterAndSortByTag
     std::sort(result.begin(), result.end(),
           [](const tag_col_dir& a, const tag_col_dir& b) {
               return a.tag_info.image_name < b.tag_info.image_name;

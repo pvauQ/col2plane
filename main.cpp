@@ -13,6 +13,7 @@ int main(int argc, char* argv[])
         " --solve_mode  p3p lm  . defaults to lm \n"     
         //" --model_dir *  . n\n"
         " --cctag_from_file   .give a file path \n"
+        " -- images_to_use how many images / tag to use with lm solver \n" 
         " -- help \n";
         return 0;
     }
@@ -35,6 +36,13 @@ int main(int argc, char* argv[])
         instance.calcCctag();
     }
     
+    
+    it = param_value.find("--images_to_use");
+        if (it != param_value.end()) {
+            int images_to_use = std::stoi(it->second);
+            instance.number_of_images_lm = images_to_use;
+        }
+
     solve_mode mode(solve_mode::LM_SOLVE);
     it = param_value.find("--solve_mode");
         if (it != param_value.end()) {

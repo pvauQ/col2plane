@@ -79,6 +79,9 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
     return cameraParams(K,distortion);
 }
 
+
+
+
 //The matrix.txt file is expected to contain scale qw qx qy qz tx ty tz and not the 4x4 transformation matrix. See Sim3d::FromFile.
 // this is  the format expected by colmap model_transformer
 //NOTE: colmap model_transformer applies rotation and trans and then scales. this will cause origo to drifit
@@ -100,7 +103,7 @@ void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float sca
                << trans[0]    << " " 
                << trans[1]    << " " 
                << trans[2]    << "\n "; 
-    std::cout << "wrote transform to file  " << file <<   "\n"  << scale << "\n" << rotation << "\n" << trans.transpose() << "\n";
+    std::cout << "wrote transform to file  " << file <<   "\n"; //  << scale << "\n" << rotation << "\n" << trans.transpose() << "\n";
 }
 
 // to produce output for colmap model_aligner;

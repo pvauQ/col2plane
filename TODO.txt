@@ -62,4 +62,8 @@ LONGS FOR IDS EVERYWHERE??
 [] balance between number of cameras vs. errors
 [] what is actual min number of  tag camera rays such that  Lm solver still converges
 [] is using 2 tags enough?
+ -for oritentation?
+ - for scale -> has to be?
 [] if using 3 tags is colinerity a problem?
+
+[] multiple runs of lm solver with difrent tag setups.
