@@ -19,30 +19,30 @@ Least 3 tags in the scene;  each tag has to bee seen least from 3 cameras, but n
 ### files generated or used
 tag_world_pos.txt -> specify world locations of tags you are using line starting # is a comment
 example:
- one per line: "id x y z"
-0 -0.429 0 0
-2  0      0 0
-3  0.520  0 0
+ one per line: "id x y z"  
+0 -0.429 0 0  
+2  0      0 0  
+3  0.520  0 0  
 
-tags.txt
-Results from cctag marker detection are stored here.
-example:
- one image per line: "filename x y id x y id"....
-_MG_0965.JPG 1279.26000977 2357.82519531 2 3398.65429688 2137.80200195 3 
+tags.txt  
+Results from cctag marker detection are stored here.  
+example:  
+ one image per line: "filename x y id x y id"....  
+_MG_0965.JPG 1279.26000977 2357.82519531 2 3398.65429688 2137.80200195 3   
 
-transform.txt
-file that can be used with colmap model_transformer this is scale quat trans, this does not have scale baked in
-example:
-1 0.915818315675864 0.397647905556966 -0.0162397421485741 0.0537515269897509 0.263553364166345 2.45591097150966 -2.7730467380097
-scale_trans.txt
-exactly same but just with scale component:
-0.378878802061081 1 0 0 0 0 0 0
+transform.txt  
+file that can be used with colmap model_transformer this is scale quat trans, this does not have scale baked in  
+example:  
+1 0.915818315675864 0.397647905556966 -0.0162397421485741 0.0537515269897509 0.263553364166345 2.45591097150966 -2.7730467380097  
+scale_trans.txt  
+exactly same but just with scale component:  
+0.378878802061081 1 0 0 0 0 0 0  
 
-camera_locations.txt
-This is produced when using p3p solve mode.
-this can be used with colmap model_aligner
-example
-filename  x y z
+camera_locations.txt  
+This is produced when using p3p solve mode.  
+this can be used with colmap model_aligner  
+example  
+filename  x y z  
 
 
 
