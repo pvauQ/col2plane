@@ -40,6 +40,7 @@ int main(int argc, char* argv[])
     it = param_value.find("--images_to_use");
         if (it != param_value.end()) {
             int images_to_use = std::stoi(it->second);
+            std::cout << images_to_use << "\n";
             instance.number_of_images_lm = images_to_use;
         }
 

@@ -11,7 +11,7 @@
 #include "tag_locations.h"
 #include "colmap_stuff.h"
 #include "tags_to_file.h"
-#include "lm_sover.h"
+#include "lm_solver.h"
 
 
 
@@ -114,7 +114,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     case:: solve_mode::LM_SOLVE:{
         //TODO:  automaattinen valinta, ja tai arg parserilta valitaan tägit
         int n_cams_to_use = this->number_of_images_lm; //  how many cameras are used per marker 
-
+        std::cout << "using " << n_cams_to_use << "cams in solver \n";
         int tags_to_use[3];
         int iter = 0;
         std::map<int,int> num_tags = tagsVisibleInImages();
@@ -158,7 +158,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
     //------------------------------------ solve part
     ///////////////////////////////////////////////////////////////////////////////////////////
-
+        
+        //todo refactor to use new solver nicely
     
         std::vector<Eigen::Vector3d> cams1 , cams2, cams3; 
         std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2, ray_dirs3;
@@ -181,8 +182,16 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         world_positions.push_back(marker_word_pos.find(tags_to_use[0])->second); // these fill the given vectors.
         world_positions.push_back(marker_word_pos.find(tags_to_use[1])->second);
         world_positions.push_back(marker_word_pos.find(tags_to_use[2])->second);
-        
-        Eigen::VectorXd solution = lmDriver(cams1,ray_dirs1, cams2,ray_dirs2, cams3,ray_dirs3,  world_positions); // SOLUTION 
+        std::vector<std::vector<Eigen::Vector3d>> cams;
+        std::vector<std::vector<Eigen::Vector3d>> rays;
+        cams.push_back(cams1);
+        cams.push_back(cams2); 
+        cams.push_back(cams3);
+        rays.push_back(ray_dirs1);
+        rays.push_back(ray_dirs2);
+        rays.push_back(ray_dirs3);
+
+        Eigen::VectorXd solution = lmDriver(cams, rays, world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
         Eigen::VectorXd ray_depths = solution.segment(6, n_cams_to_use * 3 ); // first all rays for cam1(1,2,3) cam2 camd3
@@ -201,10 +210,11 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         Eigen::Vector3d tag_2_s = cams2[0] + ray_dirs2[0] *ray_depths[n_cams_to_use];
         double s_frame_distance = (tag_1_s - tag_2_s).norm();
         double scale = world_distance / s_frame_distance;
-        //std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
-        //            << "s frame " << s_frame_distance << "\n" \
-        //            << "w frame " << world_distance << "\n" \
-        //            << "gives ratio " << scale << "\n";
+        std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
+                    << "s frame " << s_frame_distance << "\n" \
+                    << "w frame " << world_distance << "\n" \
+                    << "gives ratio " << scale << "\n";
+        std::cout << "we got scale" << scale << "\n";
 
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
         transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, "scale_trans.txt");
@@ -295,7 +305,7 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
                                 int n_cams_to_use){
 
 
-    std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
+    //std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
     std::cout << "reprojection error ( colmap) for " << n_cams_to_use << ". cam " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
     assert(use_for_solve.size() > n_cams_to_use );
     
@@ -345,7 +355,8 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
 
     std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id << "\n";
     if (!result.empty()) {
-        std::cout << " first " << result[0].camera_info.filename << "  with error: "  << result[0].camera_info.error <<  "\n";
+        std::cout << " first " << result[0].camera_info.filename << "  with error: "  << result[0].camera_info.error << \
+            " last " << result.back().camera_info.filename << "  with error: "  << result.back().camera_info.error << "\n";
     }
 
     return result;
