@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
         " --solve_mode  p3p lm  . defaults to lm \n"     
         //" --model_dir *  . n\n"
         " --cctag_from_file   .give a file path \n"
-        " -- images_to_use how many images / tag to use with lm solver \n" 
+        " -- images_to_use max images per tag to use. \n" 
         " -- help \n";
         return 0;
     }

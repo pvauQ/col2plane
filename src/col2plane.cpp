@@ -115,9 +115,10 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         //TODO:  automaattinen valinta, ja tai arg parserilta valitaan tägit
         int n_cams_to_use = this->number_of_images_lm; //  how many cameras are used per marker 
         std::cout << "using " << n_cams_to_use << "cams in solver \n";
-        int tags_to_use[3];
+        std::vector<int> tags_to_use;
         int iter = 0;
         std::map<int,int> num_tags = tagsVisibleInImages();
+        tags_to_use.resize(num_tags.size());
         for (const auto& t : num_tags){
             assert(marker_word_pos.find(t.first) != marker_word_pos.end()); //täg found but not in tags_to_use.txt
             tags_to_use[iter] = t.first;
@@ -152,68 +153,56 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             }
         }
 
-        std::vector<tag_col_dir> use_for_solve = filterAndSortByTag(image_infos, tags_to_use[0]);
-        std::vector<tag_col_dir> use_for_scale = filterAndSortByTag(image_infos, tags_to_use[1]);
-        std::vector<tag_col_dir> use_for_3 = filterAndSortByTag(image_infos, tags_to_use[2]);
+        std::vector<std::vector<tag_col_dir>> use_for_lm;
+        for (const auto& t: tags_to_use){
+            use_for_lm.emplace_back(filterAndSortByTag(image_infos, t));
+        }
 
     //------------------------------------ solve part
     ///////////////////////////////////////////////////////////////////////////////////////////
         
-        //todo refactor to use new solver nicely
-    
-        std::vector<Eigen::Vector3d> cams1 , cams2, cams3; 
-        std::vector<Eigen::Vector3d> ray_dirs1, ray_dirs2, ray_dirs3;
-        CollectCamRays(cams1,ray_dirs1,use_for_solve,tags_to_use[0],n_cams_to_use);
-        CollectCamRays(cams2,ray_dirs2,use_for_scale,tags_to_use[1],n_cams_to_use);
-        CollectCamRays(cams3,ray_dirs3,use_for_3,    tags_to_use[2],n_cams_to_use);
-
-        //shity test for some coplanarity, if this is something that actually causes problems TODO:proper tests
-        Eigen::Vector3d p0 = cams1[0], p1 = cams1[1], p2 = cams1[2], p3 = cams1[3];
-        Eigen::Vector3d v1 = p1 - p0;
-        Eigen::Vector3d v2 = p2 - p0;
-        Eigen::Vector3d plane_normal = v1.cross(v2).normalized();
-        Eigen::Vector3d test_vec = p3 - p0;
-        double dotprod = test_vec.dot(plane_normal);
-        std::cout << "cams1[0-3] planarity ( dot prod): " << dotprod  << "\n";
-
+        std::vector<std::vector<Eigen::Vector3d>> cams;
+        std::vector<std::vector<Eigen::Vector3d>> rays;
+        int total_views = 0;
+        for ( int i = 0; i < use_for_lm.size(); i++){
+            std::vector<Eigen::Vector3d> tmp_cams , tmp_rays;
+            CollectCamRays(tmp_cams, tmp_rays ,use_for_lm[i], tags_to_use[i], std::min(n_cams_to_use, static_cast<int>(use_for_lm[i].size()))); // note: if we want di
+            cams.push_back(tmp_cams);
+            rays.push_back(tmp_rays);
+            total_views += tmp_cams.size();
+        }
         
         // tag world pos
         std::vector<Eigen::Vector3d> world_positions;
-        world_positions.push_back(marker_word_pos.find(tags_to_use[0])->second); // these fill the given vectors.
-        world_positions.push_back(marker_word_pos.find(tags_to_use[1])->second);
-        world_positions.push_back(marker_word_pos.find(tags_to_use[2])->second);
-        std::vector<std::vector<Eigen::Vector3d>> cams;
-        std::vector<std::vector<Eigen::Vector3d>> rays;
-        cams.push_back(cams1);
-        cams.push_back(cams2); 
-        cams.push_back(cams3);
-        rays.push_back(ray_dirs1);
-        rays.push_back(ray_dirs2);
-        rays.push_back(ray_dirs3);
+        for(const auto& id :tags_to_use ){
+            world_positions.push_back(marker_word_pos.find(id)->second);    
+        }
 
+        if(total_views <= 6){
+            std::cerr << "warning you are  only using " << total_views << " camera tag pairs solution might suffer \n";
+        }
         Eigen::VectorXd solution = lmDriver(cams, rays, world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
-        Eigen::VectorXd ray_depths = solution.segment(6, n_cams_to_use * 3 ); // first all rays for cam1(1,2,3) cam2 camd3
+        Eigen::VectorXd ray_depths = solution.segment(6, total_views ); // first all rays for cam1(1,2,3) cam2 camd3
 
-        //std::cout << " \n" << ray_depths.size()<< "\n";
-        //std::cout << "rotation outside of solver"  << rot_angle_axis << "\n";
         Eigen::Matrix3d ROT = Eigen::AngleAxisd(rot_angle_axis.norm(), rot_angle_axis.normalized()).matrix();
         
         // establish scale part---------------------------------------------------------
+        ///////////////////////////////////////////////
 
-        // we need to know distance between pair of markers in world frame and in s frame
-        // given those scale is just ratio between those markers?? 
+        // we need to know distance between pair of markers in world frame and in s frame given those scale is just ratio between those markers
         double world_distance =(marker_word_pos.find(tags_to_use[0])->second - marker_word_pos.find(tags_to_use[1])->second).norm();
-        // cam_c + ray_dir * ray_scale = target in s frame 
-        Eigen::Vector3d tag_1_s = cams1[0] + ray_dirs1[0] *ray_depths[0];
-        Eigen::Vector3d tag_2_s = cams2[0] + ray_dirs2[0] *ray_depths[n_cams_to_use];
+        // cam_c + ray_dir * ray_scale = target in s frame
+
+        Eigen::Vector3d tag_1_s = cams[0][0] + rays[0][0] *ray_depths[0];
+        Eigen::Vector3d tag_2_s = cams[1][0] + rays[1][0] *ray_depths[cams[0].size()];
         double s_frame_distance = (tag_1_s - tag_2_s).norm();
         double scale = world_distance / s_frame_distance;
-        std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
-                    << "s frame " << s_frame_distance << "\n" \
-                    << "w frame " << world_distance << "\n" \
-                    << "gives ratio " << scale << "\n";
+        //std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
+        //            << "s frame " << s_frame_distance << "\n" \
+        //            << "w frame " << world_distance << "\n" \
+        //            << "gives ratio " << scale << "\n";
         std::cout << "we got scale" << scale << "\n";
 
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
@@ -306,8 +295,9 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
 
 
     //std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
+    std::cout<< use_for_solve.size() << " and cams : " << n_cams_to_use << "\n";
     std::cout << "reprojection error ( colmap) for " << n_cams_to_use << ". cam " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
-    assert(use_for_solve.size() > n_cams_to_use );
+    assert(use_for_solve.size() >= n_cams_to_use );
     
     for(int i = 0 ; i< n_cams_to_use;i++){
         

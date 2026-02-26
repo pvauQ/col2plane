@@ -83,6 +83,10 @@ public:
         int res_ind = 0;
         size_t kissa =std::min(cams.size(),rays.size());
 
+
+        // all cameras that see first marker
+        // all cameras that see second marker...
+        // all have 3 residuals virhe targettiin nähden xyz
         for (size_t i = 0; i<kissa; i++){
             //cams that see ith marker
             const std::vector<Eigen::Vector3d>& cam_group = cams[i];
@@ -162,7 +166,6 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
     //std::cout <<" rots"  << params.segment<3>(0)   << "\n";
     //std::cout <<" trans"  << params.segment<3>(3)   << "\n";
     //std::cout <<" depths"  << params.segment(6, total_cams)  << "\n";
-    std::cout << "perkele";
     return params;
     // https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 }
