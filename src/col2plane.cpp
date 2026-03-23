@@ -17,10 +17,10 @@
 
 Col2Plane::Col2Plane(){
     //set marker world positions;
-    this->marker_word_pos =  CctagFileHelper::TagWorldLocationFromFile(std::filesystem::path("tag_world_pos.txt"));    
     
     std::filesystem::path path("photodir/malli");
     std::filesystem::path model_path  =path ;
+    this->marker_word_pos =  CctagFileHelper::TagWorldLocationFromFile(path / "tag_world_pos.txt");    
     colmap_transforms =  getAvgreprojError(model_path); // this gives transforms that have the error in there :)
     colmap_cam_params = getCameraParameters(model_path);
 
@@ -28,8 +28,8 @@ Col2Plane::Col2Plane(){
 
 // cctag output previously saved to a file
 void Col2Plane::withPrecalulated(std::string file){
-    std::filesystem::path p = std::filesystem::current_path();
-    img_tags = CctagFileHelper::readTagsFromtxt(p/file);
+    std::filesystem::path p = std::filesystem::current_path() / "photodir/malli";
+    img_tags = CctagFileHelper::readTagsFromtxt(p/ file);
 }
 
 //use cctag to find markers
@@ -102,7 +102,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             }
         }
             //this filtering  uses reprojection error of pnp solve -> it's different than colmap reperror!!
-            std::vector<matrixTransform> filtered_cams = FilterByError(tag_based_cam_trans,5.5);
+            std::vector<matrixTransform> filtered_cams = FilterBestN(tag_based_cam_trans, 5); //FilterByError(tag_based_cam_trans,15.5);
             cameraPosOutput(filtered_cams);
     }break;
 
@@ -112,35 +112,37 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
 
     case:: solve_mode::LM_SOLVE:{
-        //TODO:  automaattinen valinta, ja tai arg parserilta valitaan tägit
         int n_cams_to_use = this->number_of_images_lm; //  how many cameras are used per marker 
-        std::cout << "using " << n_cams_to_use << "cams in solver \n";
+        std::cout << "using " << n_cams_to_use << " cams in solver \n";
         std::vector<int> tags_to_use;
-        int iter = 0;
         std::map<int,int> num_tags = tagsVisibleInImages();
-        tags_to_use.resize(num_tags.size());
+        
         for (const auto& t : num_tags){
-            assert(marker_word_pos.find(t.first) != marker_word_pos.end()); //täg found but not in tags_to_use.txt
-            tags_to_use[iter] = t.first;
-            iter++;
-            if (iter >3) 
-                break;
+            if (marker_word_pos.find(t.first) == marker_word_pos.end()){// kyseistä markkeria ei ole tarkoitus käyttää
+
+                continue;
+            }
+            tags_to_use.push_back(t.first);
+
+        }
+        if(tags_to_use.empty()){
+            std::cerr << " no tags to do calculation.";
+            return;
         }
 
 
         
-        /*solveri tarvitsee cams,  ray_dirs, X_target ( world pos) 
+        /*solveri tarvitsee cams,  ray_dirs, X_target( world pos) 
         cams  =suoraan colmap kamerat ja niiden lokaatiot.
         ray_dirs = camera_rotation⁻1 *  normalize() K⁻1 * {u,v,1}^T )
         */
-        // halutaan siis n kameraa jotka näkee markkerin x, ja tämä erikseen muutamalla markkerille.
         
         std::sort(colmap_transforms.begin(), colmap_transforms.end(), 
           [](const transform& a, const transform& b) {
               return a.error < b.error;
           });
+        //tägi ja kamera yhdiste
         std::vector<tag_col_dir> image_infos ;
-        //tägit kuvissa
         for(const auto& tagI: img_tags){
             tag_col_dir tmp; 
             tmp.tag_info =tagI;
@@ -154,6 +156,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         }
 
         std::vector<std::vector<tag_col_dir>> use_for_lm;
+        std::cout << tags_to_use.size() <<  " individual tags that can be used" << "\n";
         for (const auto& t: tags_to_use){
             use_for_lm.emplace_back(filterAndSortByTag(image_infos, t));
         }
@@ -179,7 +182,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         }
 
         if(total_views <= 6){
-            std::cerr << "warning you are  only using " << total_views << " camera tag pairs solution might suffer \n";
+            std::cerr << "warning you are  only using " << total_views << " camera tag pairs, solution might suffer \n";
         }
         Eigen::VectorXd solution = lmDriver(cams, rays, world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
@@ -203,11 +206,12 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         //            << "s frame " << s_frame_distance << "\n" \
         //            << "w frame " << world_distance << "\n" \
         //            << "gives ratio " << scale << "\n";
-        std::cout << "we got scale" << scale << "\n";
+        std::cout << "SCALE: " << scale << "\n";
 
         Eigen::Quaterniond q_rot = Eigen::Quaterniond(ROT);
-        transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, "scale_trans.txt");
-        transToFile(q_rot,trans, 1, "transform.txt");
+        std::filesystem::path path("photodir/malli");
+        transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, path / "scale_trans.txt");
+        transToFile(q_rot,trans, 1, path / "transform.txt");
      
         
     }break;
@@ -257,8 +261,6 @@ void Col2Plane::cameraPosOutput(std::vector<matrixTransform>& transforms){
 
 }
 
-// variant for calculating and outputting the transform that takes colmap model to world coords..
-//void Col2Plane::transformOutput(){};
 
 
 //calc one ray based on x,y  coordinates camera rotation.
@@ -295,8 +297,8 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
 
 
     //std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
-    std::cout<< use_for_solve.size() << " and cams : " << n_cams_to_use << "\n";
-    std::cout << "reprojection error ( colmap) for " << n_cams_to_use << ". cam " << use_for_solve[n_cams_to_use].camera_info.error <<"\n";
+    std::cout<< use_for_solve.size() << " possible , using: : " << n_cams_to_use
+    << "reperror( colmap) for " << n_cams_to_use << ". cam " << "observing tag: " << tag_to_use << " " << use_for_solve[n_cams_to_use-1].camera_info.error <<"\n";
     assert(use_for_solve.size() >= n_cams_to_use );
     
     for(int i = 0 ; i< n_cams_to_use;i++){
@@ -343,10 +345,10 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
             return a.camera_info.error < b.camera_info.error;
         });
 
-    std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id << "\n";
+    std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id;
     if (!result.empty()) {
-        std::cout << " first " << result[0].camera_info.filename << "  with error: "  << result[0].camera_info.error << \
-            " last " << result.back().camera_info.filename << "  with error: "  << result.back().camera_info.error << "\n";
+        std::cout << " first " << result[0].camera_info.id << " id  with error: "  << result[0].camera_info.error << \
+            " last " << result.back().camera_info.id << " id  with error: "  << result.back().camera_info.error << "\n";
     }
 
     return result;

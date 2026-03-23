@@ -2,6 +2,7 @@
 #include <eigen3/Eigen/Geometry>
 #include <filesystem>
 #include <string>
+#include <paths.h>
 #include <vector>
 #include <stdexcept>
 #include <assert.h>
@@ -86,12 +87,12 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
 // this is  the format expected by colmap model_transformer
 //NOTE: colmap model_transformer applies rotation and trans and then scales. this will cause origo to drifit
 // to combat this run it twice, first with only the scale part
-void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale, std::string file){
+void transToFile (Eigen::Quaterniond rotation, Eigen::Vector3d trans , float scale, std::filesystem::path file){
     //std::string file =  "transformation.txt";
     std::ofstream out_stream(file);
 
     if (!out_stream.is_open()) {
-        throw std::runtime_error("Failed to open " + file);
+        throw std::runtime_error("Failed to open " + file.string());
     }
     out_stream << std::setprecision(std::numeric_limits<double>::digits10);
 
@@ -112,9 +113,12 @@ void camerasTofile(std::vector<transform> cameras) {
     return;
 }
 void camerasTofile(std::vector<matrixTransform> cameras){
-    std::string file =  "camera_locations.txt";
-    std::ofstream out(file);
-    std::cout << "# " << cameras.size() << " cams outputed to " << file<< " \n";
+    std::filesystem::path path("photodir/malli");
+    //std::string file =  "camera_locations.txt";
+    path = path / "camera_locations.txt";
+
+    std::ofstream out(path);
+    std::cout << "# " << cameras.size() << " cams outputed to " << path<< " \n";
     
     for(const auto& cam : cameras){
         assert(cam.filename != "");

@@ -60,7 +60,8 @@ std::vector<tagInfo> readTagsFromImages(std::filesystem::path dir){
         }
         tags.push_back(info);
     }
-    saveTagsToFile(std::filesystem::current_path(), tags);
+    saveTagsToFile(dir,tags);
+    //saveTagsToFile(std::filesystem::current_path(), tags);
     return tags;
 }
 

@@ -10,11 +10,12 @@ int main(int argc, char* argv[])
 
     if ( argc > 1 && std::string(argv[1]) == "--help"){
         std::cout <<
+        "all files from user should be in  /photodir/malli \n"
         " --solve_mode  p3p lm  . defaults to lm \n"     
         //" --model_dir *  . n\n"
-        " --cctag_from_file   .give a file path \n"
-        " -- images_to_use max images per tag to use. \n" 
-        " -- help \n";
+        " --cctag_from_file   give a file name  (in prementioned folder) \n"
+        " --images_to_use   max images per tag to use. \n" 
+        " -- help  \n";
         return 0;
     }
     for(int i = 1; i < argc - 1; i += 2){
@@ -40,7 +41,6 @@ int main(int argc, char* argv[])
     it = param_value.find("--images_to_use");
         if (it != param_value.end()) {
             int images_to_use = std::stoi(it->second);
-            std::cout << images_to_use << "\n";
             instance.number_of_images_lm = images_to_use;
         }
 

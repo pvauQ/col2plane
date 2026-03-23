@@ -53,10 +53,11 @@ for all math convert to eigen as soon as possible. (opencv things look cursed)
 LONGS FOR IDS EVERYWHERE??
 
 ----- software usability section-----------------
-[] select markers to use based on what markers are visible in the scene and are defined in tag_world_pos.txt
-[] save all files related to model in directory of that model
+[X] select markers to use based on what markers are visible in the scene and are defined in tag_world_pos.txt
+[X] save all files related to model in directory of that model
 [x] make nice arg parse to select operation mode.
-[] lisää  bash skriptiin kansion teko
+[] support for other than opencv kamera models..
+[] use filestructure from colmap
 
 ---- improve accuracy of alignment
 [] balance between number of cameras vs. errors
@@ -65,5 +66,5 @@ LONGS FOR IDS EVERYWHERE??
  -for oritentation?
  - for scale -> has to be?
 [] if using 3 tags is colinerity a problem?
-
+[] if SfM poses are bad, what to do, how to figure if they are bad..
 [] multiple runs of lm solver with difrent tag setups.

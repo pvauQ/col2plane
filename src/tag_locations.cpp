@@ -16,6 +16,7 @@ std::map<std::string, boost::ptr_list<cctag::ICCTag>> readTagsFromImages(std::fi
 	const std::size_t nCrowns{3};
 	cctag::Parameters params(nCrowns);
 	params.setUseCuda(true);
+    //params._cannyThrLow = 0.03; // jos pienet jäisi  tunnistamatta (väärin)
     std::map<std::string, boost::ptr_list<cctag::ICCTag>> image_markers;
 
     try {

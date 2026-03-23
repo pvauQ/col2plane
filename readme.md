@@ -1,5 +1,8 @@
 ### work in progress !!
 
+cctag has invalid detections, this is not usable because of that!! do not use :D
+
+
 This is utility software to align and  to establish absolute scale for colmap model. This is achieved by using visual markers (cctag) and their known positions.
 
 There are two distinct operation modes:

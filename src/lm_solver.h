@@ -150,15 +150,15 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
     params << 0.0, 0.0, 0.0,  // Rotation vector (identity initially)
             is[0], is[1], is[2],  // Translation
             Eigen::VectorXd::Ones(total_cams);
-    //Eigen::AngleAxisd init_rot(90.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
-    //params.segment<3>(0) = init_rot.axis() * init_rot.angle();
+    Eigen::AngleAxisd init_rot(90.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
+    params.segment<3>(0) = init_rot.axis() * init_rot.angle();
 
 
     int ret = solver.minimize(params);
 
     Eigen::VectorXd final_res;
     functor(params, final_res);
-    std::cout << "LM solver got " << ", RMSE: " << sqrt(final_res.squaredNorm()/final_res.size()) << "\n";
+    std::cout << "\nLM solver RMSE: " << sqrt(final_res.squaredNorm()/final_res.size()) << "\n";
 
 
     //std::cout << params.segment<3>(3) <<"\n";

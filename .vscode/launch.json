@@ -9,9 +9,16 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/col2plane",  // from CMake
-            "args": ["--cctag_from_file", "my_tags.txt"],  // ← RUNTIME ARGS HERE
+            "args": ["--cctag_from_file", "tags.txt"],  // ← RUNTIME ARGS HERE
             "cwd": "${workspaceFolder}",
-            "miDebuggerPath": "/usr/bin/gdb"
+            "miDebuggerPath": "/usr/bin/gdb",
+            "environment": [
+
+                {
+                    "name": "DEBUGINFOD_CACHE_PATH",
+                    "value": "${env:HOME}/.cache/debuginfod_client"
+                }
+            ]
         }
     ]
 }
