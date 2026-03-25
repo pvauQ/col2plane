@@ -228,14 +228,25 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
     for(const auto& cam_group : cams){
         total_cams += cam_group.size();
     }
-    Eigen::Vector3d is = cams[0][0]; // something to use as initial
+    Eigen::Vector3d is;
+    int entries =0;
+
+    for(const auto& cam : cams){
+        for (const Eigen::Vector3d t :cam){
+            is +=t;
+            entries ++;
+        }
+    }
+    is = -(is / entries);
     Eigen::VectorXd params(6 + total_cams);
     
+    Eigen::VectorXd init_rays =  Eigen::VectorXd::Random(total_cams) + Eigen::VectorXd::Ones(total_cams); //this is 0-2
+
     params << 0.0, 0.0, 0.0,  // Rotation vector (identity initially)
             is[0], is[1], is[2],  // Translation
-            Eigen::VectorXd::Ones(total_cams);
-    //Eigen::AngleAxisd init_rot(90.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
-    //params.segment<3>(0) = init_rot.axis() * init_rot.angle();
+            init_rays;
+    Eigen::AngleAxisd init_rot(90.0 * M_PI/180.0, Eigen::Vector3d(1,1,1).normalized()); // just something initially
+    params.segment<3>(0) = init_rot.axis() * init_rot.angle();
 
 
     int ret = solver.minimize(params);

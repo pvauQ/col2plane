@@ -15,6 +15,7 @@ int main(int argc, char* argv[])
         //" --model_dir *  . n\n"
         " --cctag_from_file   give a file name  (in prementioned folder) \n"
         " --images_to_use   max images per tag to use. \n" 
+        "--max_rep_error  max reproj error of img/camera.(colmap frame) " 
         " -- help  \n";
         return 0;
     }
@@ -42,6 +43,12 @@ int main(int argc, char* argv[])
         if (it != param_value.end()) {
             int images_to_use = std::stoi(it->second);
             instance.number_of_images_lm = images_to_use;
+        }
+
+        it = param_value.find("--max_rep_error");
+        if (it != param_value.end()) {
+            double max_error = std::stod(it->second);
+            instance.max_rep_error = max_error;
         }
 
     solve_mode mode(solve_mode::LM_SOLVE);

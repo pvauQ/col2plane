@@ -75,7 +75,10 @@ void Col2Plane::col2CctSpace(solve_mode mode){
     //CctagFileHelper::tagInfo im;
     switch (mode)
     {
+
     case solve_mode::P3P_SOLVE:{
+
+
         for(const auto& im: img_tags){
             if (im.ids.size() == 4)
             ims_to_use.push_back(im);
@@ -112,6 +115,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
 
 
     case:: solve_mode::LM_SOLVE:{
+
+
         int n_cams_to_use = this->number_of_images_lm; //  how many cameras are used per marker 
         std::cout << "using " << n_cams_to_use << " cams in solver \n";
         std::vector<int> tags_to_use;
@@ -171,7 +176,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         int total_views = 0;
         for ( int i = 0; i < use_for_lm.size(); i++){
             std::vector<Eigen::Vector3d> tmp_cams , tmp_rays;
-            CollectCamRays(tmp_cams, tmp_rays ,use_for_lm[i], tags_to_use[i], std::min(n_cams_to_use, static_cast<int>(use_for_lm[i].size()))); // note: if we want di
+            // this collects rays and their cams, we also filter  shit cams in this step.. (kind of spagheti)
+            CollectCamRays(tmp_cams, tmp_rays ,use_for_lm[i], tags_to_use[i], std::min(n_cams_to_use, static_cast<int>(use_for_lm[i].size())),this->max_rep_error); // note: if we want di
             cams.push_back(tmp_cams);
             rays.push_back(tmp_rays);
             total_views += tmp_cams.size();
@@ -186,6 +192,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         if(total_views <= 6){
             std::cerr << "warning you are  only using " << total_views << " camera tag pairs, solution might suffer \n";
         }
+        else{ std::cout <<"using " << total_views <<  " rows to solve the transform\n";}
         Eigen::VectorXd solution = lmDriver(cams, rays, world_positions); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
@@ -305,15 +312,17 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
                                 std::vector<Eigen::Vector3d> & ray_dirs, 
                                 std::vector<tag_col_dir> use_for_solve , 
                                 int tag_to_use,
-                                int n_cams_to_use){
+                                int n_cams_to_use,
+                                double max_error){
 
 
     //std::cout << use_for_solve.size() <<  "  with images when  we need  "<<  n_cams_to_use << "cameras that see tag: " << tag_to_use << "\n";
-    std::cout<< use_for_solve.size() << " possible , using: : " << n_cams_to_use
-    << "reperror( colmap) for " << n_cams_to_use << ". cam " << "observing tag: " << tag_to_use << " " << use_for_solve[n_cams_to_use-1].camera_info.error <<"\n";
     assert(use_for_solve.size() >= n_cams_to_use );
     
     for(int i = 0 ; i< n_cams_to_use;i++){
+        if (use_for_solve[i].camera_info.error > max_error){
+            continue;
+        }
         
         Eigen::Vector3d c = (-use_for_solve[i].camera_info.rot.toRotationMatrix().transpose()) * use_for_solve[i].camera_info.translation;
         cams.push_back(c);
@@ -327,7 +336,9 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
                 break;
             }
         }
-    } 
+    }
+    std::cout<< use_for_solve.size() << " possible, using: : " << cams.size()
+    << " reperror( colmap) for " << cams.size() << ". cam " << "observing tag: " << tag_to_use << " is  " << use_for_solve[cams.size()-1].camera_info.error <<"\n";
  }
 
 // filter so we have only tag_col_dirs that have tag defined by tag id

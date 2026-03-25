@@ -39,6 +39,7 @@ class Col2Plane
     void kissa();
 
     int number_of_images_lm = 3;
+    double max_rep_error = 10; // to filter cams to use with lm stuff...
     std::vector<CctagFileHelper::tagInfo> img_tags;
     std::map<int,Eigen::Vector3d> marker_word_pos;
 
@@ -47,7 +48,7 @@ class Col2Plane
     std::vector<transform> colmap_transforms;  
     cameraParams colmap_cam_params;
 
-    void CollectCamRays(std::vector<Eigen::Vector3d> & cams, std::vector<Eigen::Vector3d> & ray_dirs, std::vector<tag_col_dir> use_for_solve, int tag_to_use, int n_cams_to_use);
+    void CollectCamRays(std::vector<Eigen::Vector3d> & cams, std::vector<Eigen::Vector3d> & ray_dirs, std::vector<tag_col_dir> use_for_solve, int tag_to_use, int n_cams_to_use,double max_error = 10);
      std::vector<tag_col_dir> filterAndSortByTag(const std::vector<tag_col_dir>& image_infos, int tag_id);
 };
 
