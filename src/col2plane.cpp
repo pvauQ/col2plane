@@ -117,8 +117,10 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         std::vector<int> tags_to_use;
         std::map<int,int> num_tags = tagsVisibleInImages();
         
+
         for (const auto& t : num_tags){
             if (marker_word_pos.find(t.first) == marker_word_pos.end()){// kyseistä markkeria ei ole tarkoitus käyttää
+                //std::cout << t.first << " : " << t.second << "\n";
 
                 continue;
             }
@@ -198,10 +200,20 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         double world_distance =(marker_word_pos.find(tags_to_use[0])->second - marker_word_pos.find(tags_to_use[1])->second).norm();
         // cam_c + ray_dir * ray_scale = target in s frame
 
-        Eigen::Vector3d tag_1_s = cams[0][0] + rays[0][0] *ray_depths[0];
-        Eigen::Vector3d tag_2_s = cams[1][0] + rays[1][0] *ray_depths[cams[0].size()];
-        double s_frame_distance = (tag_1_s - tag_2_s).norm();
-        double scale = world_distance / s_frame_distance;
+        int entries = 0;
+        double dist = 0;
+        for(int i =0; i <cams[0].size() & i <cams[1].size() ; i++){
+            Eigen::Vector3d tag_1_s = cams[0][i] + rays[0][i] *ray_depths[i];
+            Eigen::Vector3d tag_2_s = cams[1][i] + rays[1][i] *ray_depths[cams[0].size()+i];
+            dist += (tag_1_s - tag_2_s).norm();
+            entries++;
+        }
+        double scale = world_distance / (dist/entries);
+        
+        //Eigen::Vector3d tag_1_s = cams[0][0] + rays[0][0] *ray_depths[0];
+        //Eigen::Vector3d tag_2_s = cams[1][0] + rays[1][0] *ray_depths[cams[0].size()];
+        //double s_frame_distance = (tag_1_s - tag_2_s).norm();
+        //double scale = world_distance / s_frame_distance;
         //std::cout << "distance of pair " << tags_to_use[0] << " " << tags_to_use[1] << " in \n"\
         //            << "s frame " << s_frame_distance << "\n" \
         //            << "w frame " << world_distance << "\n" \
@@ -347,8 +359,8 @@ void Col2Plane::CollectCamRays(std::vector<Eigen::Vector3d> & cams,
 
     std::cout << "we have " << result.size() << " possible imgs with tag " << tag_id;
     if (!result.empty()) {
-        std::cout << " first " << result[0].camera_info.id << " id  with error: "  << result[0].camera_info.error << \
-            " last " << result.back().camera_info.id << " id  with error: "  << result.back().camera_info.error << "\n";
+        std::cout << " first img id: " << result[0].camera_info.id << " with error: "  << result[0].camera_info.error << \
+            " last img id " << result.back().camera_info.id << " id  with error: "  << result.back().camera_info.error << "\n";
     }
 
     return result;

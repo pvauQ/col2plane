@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/col2plane",  // from CMake
-            "args": ["--cctag_from_file", "tags.txt"],  // ← RUNTIME ARGS HERE
+            "args": ["--cctag_from_file", "my_tags.txt", "--images_to_use", "99"],  // ← RUNTIME ARGS HERE
             "cwd": "${workspaceFolder}",
             "miDebuggerPath": "/usr/bin/gdb",
             "environment": [
