@@ -196,7 +196,9 @@ public:
 
 Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
                     std::vector<std::vector<Eigen::Vector3d>> rays,
-                        std::vector<Eigen::Vector3d> world_pos){
+                        std::vector<Eigen::Vector3d> world_pos,
+                        double &rms_out
+                    ){
     
 
 
@@ -253,7 +255,8 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
 
     Eigen::VectorXd final_res;
     functor(params, final_res);
-    std::cout << "\nLM solver RMSE: " << sqrt(final_res.squaredNorm()/final_res.size()) << "\n";
+    rms_out = sqrt(final_res.squaredNorm()/final_res.size());
+    std::cout << "\nLM solver RMSE: " << rms_out << "\n";
 
 
 

@@ -80,6 +80,37 @@ cameraParams getCameraParameters(std::filesystem::path colmap_model_dir){
     return cameraParams(K,distortion);
 }
 
+//this generates "standard 4*4  transformation matrix to file"
+void transMatrixToFile(Eigen::Matrix3d rot, Eigen::Vector3d trans , float scale, std::filesystem::path file, double info ){
+
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+
+    T.block<3,3>(0,0) = scale * rot;
+    T.block<3,1>(0,3) = scale * trans;
+
+        std::ofstream out_stream(file);
+
+    if (!out_stream.is_open()) {
+        throw std::runtime_error("Failed to open " + file.string());
+    }
+    out_stream << std::setprecision(std::numeric_limits<double>::digits10);
+    
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                out_stream << T(i,j);
+                if (j < 3) out_stream << " ";
+            }
+            out_stream << "\n";
+        }
+    out_stream << "\n # ";
+    out_stream <<"scale:"  << scale << " solver RMSE " << info;
+
+    out_stream.close();
+    std::cout << "wrote  4X4 matrix transform to file  " << file <<   "\n";
+    return;
+}
+
 
 
 

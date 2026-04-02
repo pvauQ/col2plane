@@ -174,6 +174,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         std::vector<std::vector<Eigen::Vector3d>> cams;
         std::vector<std::vector<Eigen::Vector3d>> rays;
         int total_views = 0;
+        double solver_error;
         for ( int i = 0; i < use_for_lm.size(); i++){
             std::vector<Eigen::Vector3d> tmp_cams , tmp_rays;
             // this collects rays and their cams, we also filter  shit cams in this step.. (kind of spagheti)
@@ -193,7 +194,7 @@ void Col2Plane::col2CctSpace(solve_mode mode){
             std::cerr << "warning you are  only using " << total_views << " camera tag pairs, solution might suffer \n";
         }
         else{ std::cout <<"using " << total_views <<  " rows to solve the transform\n";}
-        Eigen::VectorXd solution = lmDriver(cams, rays, world_positions); // SOLUTION 
+        Eigen::VectorXd solution = lmDriver(cams, rays, world_positions,solver_error); // SOLUTION 
         Eigen::Vector3d rot_angle_axis = solution.segment<3>(0);
         Eigen::Vector3d trans = solution.segment<3>(3);
         Eigen::VectorXd ray_depths = solution.segment(6, total_views ); // first all rays for cam1(1,2,3) cam2 camd3
@@ -231,6 +232,8 @@ void Col2Plane::col2CctSpace(solve_mode mode){
         std::filesystem::path path("photodir/malli");
         transToFile(Eigen::Quaterniond(1,0,0,0), Eigen::Vector3d(0.0, 0.0, 0.0), scale, path / "scale_trans.txt");
         transToFile(q_rot,trans, 1, path / "transform.txt");
+        
+        transMatrixToFile(ROT,trans, scale, path / "trans_matrix.txt",solver_error );
      
         
     }break;
