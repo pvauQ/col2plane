@@ -230,7 +230,7 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
     for(const auto& cam_group : cams){
         total_cams += cam_group.size();
     }
-    Eigen::Vector3d is;
+    Eigen::Vector3d is(0.0,0.0,0.0);
     int entries =0;
 
     for(const auto& cam : cams){
@@ -256,7 +256,7 @@ Eigen::VectorXd lmDriver(std::vector<std::vector<Eigen::Vector3d>> cams,
     Eigen::VectorXd final_res;
     functor(params, final_res);
     rms_out = sqrt(final_res.squaredNorm()/final_res.size());
-    std::cout << "\nLM solver RMSE: " << rms_out << "\n";
+    std::cout << "\n cursed LM solver RMSE: " << rms_out << "\n";
 
 
 
