@@ -17,6 +17,9 @@ target_link_libraries(${PROJECT_NAME}   CCTag::CCTag
                                         Eigen3::Eigen
                                         ${OpenCV_LIBS})
 
+add_executable(trans_to_4x4_mat s_q_t_to_4x4_mat.cpp)
+target_link_libraries(trans_to_4x4_mat Eigen3::Eigen)
+
 
 
 
